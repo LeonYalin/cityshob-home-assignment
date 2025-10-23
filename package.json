@@ -1,0 +1,41 @@
+{
+  "name": "real-time-todo-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Real-time To-Do List Application with Angular frontend and Node.js backend",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "start:dev": "concurrently \"npm:dev:*\"",
+    "dev:frontend": "npm --workspace packages/frontend start",
+    "dev:backend": "npm --workspace packages/backend run dev",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "clean": "npm run clean --workspaces"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "@types/node": "^20.8.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LeonYalin/cityshob-home-assignment.git"
+  },
+  "keywords": [
+    "todo",
+    "real-time",
+    "angular",
+    "nodejs",
+    "socket.io",
+    "mongodb",
+    "typescript"
+  ],
+  "author": "Leon Yalin",
+  "license": "MIT"
+}
