@@ -1,7 +1,7 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { ApiService, HealthResponse, HelloResponse } from './services/api.service';
+import { ApiService, HealthResponse, HelloResponse, Todo } from './services/api.service';
 
 @Component({
   selector: 'app-root',
@@ -14,6 +14,7 @@ export class App implements OnInit {
   protected readonly isLoading = signal(false);
   protected readonly healthData = signal<HealthResponse | null>(null);
   protected readonly helloData = signal<HelloResponse | null>(null);
+  protected readonly todos = signal<Todo[]>([]);
   protected readonly error = signal<string | null>(null);
 
   private readonly apiService = inject(ApiService);
@@ -38,16 +39,27 @@ export class App implements OnInit {
       }
     });
 
-    // Test hello endpoint
+    // Test hello endpoint (if still exists)
     this.apiService.getHello().subscribe({
       next: (data) => {
         this.helloData.set(data);
         console.log('Hello endpoint successful:', data);
+      },
+      error: (err) => {
+        console.log('Hello endpoint not found (expected after restructure)');
+      }
+    });
+
+    // Test todos endpoint
+    this.apiService.getAllTodos().subscribe({
+      next: (data) => {
+        this.todos.set(data);
+        console.log('Todos API successful:', data);
         this.isLoading.set(false);
       },
       error: (err) => {
-        this.error.set(`Hello endpoint failed: ${err.message}`);
-        console.error('Hello endpoint error:', err);
+        this.error.set(`Todos API failed: ${err.message}`);
+        console.error('Todos API error:', err);
         this.isLoading.set(false);
       }
     });
@@ -55,5 +67,53 @@ export class App implements OnInit {
 
   retryConnection() {
     this.testApiConnection();
+  }
+
+  createTestTodo() {
+    const testTodo = {
+      title: 'Test Todo from Frontend',
+      description: 'This is a test todo created from the Angular frontend',
+      priority: 'high' as const
+    };
+
+    this.apiService.createTodo(testTodo).subscribe({
+      next: (data) => {
+        console.log('Todo created:', data);
+        // Refresh the todos list
+        this.testApiConnection();
+      },
+      error: (err) => {
+        this.error.set(`Failed to create todo: ${err.message}`);
+        console.error('Create todo error:', err);
+      }
+    });
+  }
+
+  toggleTodo(id: string) {
+    this.apiService.toggleTodo(id).subscribe({
+      next: (data) => {
+        console.log('Todo toggled:', data);
+        // Refresh the todos list
+        this.testApiConnection();
+      },
+      error: (err) => {
+        this.error.set(`Failed to toggle todo: ${err.message}`);
+        console.error('Toggle todo error:', err);
+      }
+    });
+  }
+
+  deleteTodo(id: string) {
+    this.apiService.deleteTodo(id).subscribe({
+      next: () => {
+        console.log('Todo deleted');
+        // Refresh the todos list
+        this.testApiConnection();
+      },
+      error: (err) => {
+        this.error.set(`Failed to delete todo: ${err.message}`);
+        console.error('Delete todo error:', err);
+      }
+    });
   }
 }

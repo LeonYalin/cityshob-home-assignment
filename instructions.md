@@ -10,7 +10,7 @@
 - ✅ Comprehensive .gitignore files
 - ✅ Clean directory structure with proper separation
 
-#### 2. **Backend Foundation**
+#### 2. **Backend Foundation & Architecture**
 - ✅ Node.js/TypeScript Express server
 - ✅ Live reload development setup (ts-node-dev)
 - ✅ Production build pipeline (TypeScript → JavaScript)
@@ -21,6 +21,11 @@
 - ✅ Jest testing framework with passing tests
 - ✅ ESLint configuration
 - ✅ Single production JS file deployment
+- ✅ **Class-based architecture implementation**
+- ✅ **Repository pattern with MongoDB and in-memory fallback**
+- ✅ **Dependency injection with Factory patterns**
+- ✅ **Zod validation schemas for type-safe APIs**
+- ✅ **Structured logging with context-aware Logger class**
 
 #### 3. **Frontend Foundation**
 - ✅ Angular 18 with standalone components
@@ -41,15 +46,23 @@
 
 ### 🚧 **Next Steps (Remaining)**
 
-1. **MongoDB Integration** - Database setup and Task model
-2. **Backend Architecture** - Service/Repository layers
-3. **REST API** - Full CRUD operations for tasks
-4. **Real-time Features** - Socket.IO implementation
-5. **Locking Mechanism** - Atomic operations and concurrency
-6. **Angular Frontend** - Task management UI components
-7. **Complete Integration** - Full stack communication
-8. **Testing & Documentation** - Comprehensive testing suite
-9. **Authentication (Bonus)** - JWT implementation
+1. **REST API** - Complete CRUD operations for todos (endpoints ready, needs testing)
+2. **Real-time Features** - Socket.IO implementation for live updates
+3. **Locking Mechanism** - Atomic operations and concurrency control
+4. **Angular Frontend** - Task management UI components
+5. **Complete Integration** - Full stack communication with real-time sync
+6. **Testing & Documentation** - Comprehensive testing suite
+7. **Authentication (Bonus)** - JWT implementation
+
+### ✅ **Recently Completed**
+
+#### **Backend Architecture Conversion (Class-based)**
+- ✅ **Services converted to classes** - TodoService with constructor injection
+- ✅ **Repository pattern implemented** - ITodoRepository interface with MongoDB and in-memory implementations
+- ✅ **Factory patterns** - ServiceFactory and RepositoryFactory for dependency management
+- ✅ **Logger service as class** - Context-aware logging with proper DI
+- ✅ **Middleware remains modular** - Stateless functions following best practices
+- ✅ **Controllers remain modular** - Stateless objects using service factories
 
 ---
 
@@ -68,6 +81,13 @@ The goal is to build a clean, modular, real-time synchronized to-do app using mo
 - **Monorepo:** npm workspaces
 - **Realtime:** Socket.IO
 - **Authentication (Bonus):** JWT
+
+**Backend Architecture Pattern**
+- **Classes for Stateful Components**: Services, Repositories, Logger, Database connections
+- **Modules for Stateless Components**: Controllers, Middleware, Routes, Utilities
+- **Dependency Injection**: Constructor injection with Factory patterns
+- **Repository Pattern**: Data access abstraction with MongoDB and in-memory fallback
+- **Service Layer**: Business logic with injected dependencies
 
 **Monorepo Structure**
 /package.json # Root workspace config
@@ -144,24 +164,78 @@ real-time-todo-app/
 
 ---
 
-## 2. Backend Design
+## 2. Backend Architecture (Class-Based Implementation)
 
-### 2.1 Architecture Layers
-| Layer | Responsibility |
-|-------|----------------|
-| **Controller** | HTTP endpoints, validation, error handling |
-| **Service** | Business logic (locking, broadcasting, validation) |
-| **Repository** | Database operations (CRUD, atomic updates) |
-| **Socket Layer** | Real-time events & communication |
-| **Model** | Mongoose schema + TypeScript interfaces |
+### 2.1 Architecture Patterns ✅ **IMPLEMENTED**
 
-### 2.2 Design Patterns
-- **Repository Pattern:** For clean DB interaction.
-- **Service Pattern:** Encapsulate business logic.
-- **Singleton Pattern:** For Socket.IO server instance.
-- **Factory Pattern:** (optional) for creating sockets/DB connections.
+#### **Classes (Stateful Components)**
+- **Services**: Business logic with dependency injection
+  ```typescript
+  export class TodoService {
+    constructor(
+      private readonly todoRepository: ITodoRepository,
+      private readonly logger: Logger
+    ) {}
+  }
+  ```
+- **Repositories**: Data access with connection management
+  ```typescript
+  export class MongoTodoRepository implements ITodoRepository {
+    private readonly logger: Logger;
+    constructor() {
+      this.logger = new Logger('MongoTodoRepository');
+    }
+  }
+  ```
+- **Logger**: Context-aware logging service
+- **Database Services**: Connection and state management
 
-### 2.3 Task Model
+#### **Modules (Stateless Components)**
+- **Controllers**: HTTP endpoint handlers
+  ```typescript
+  export const todoController = {
+    getAllTodos: async (req, res, next) => {
+      const todoService = await ServiceFactory.getTodoService();
+      // ... implementation
+    }
+  };
+  ```
+- **Middleware**: Request/response processors (pure functions)
+- **Routes**: Express route definitions
+- **Utilities**: Pure helper functions
+
+### 2.2 Dependency Injection & Factory Pattern ✅ **IMPLEMENTED**
+- **ServiceFactory**: Creates and manages service instances
+- **RepositoryFactory**: Selects MongoDB or in-memory repository based on availability
+- **Constructor Injection**: All dependencies injected via constructors
+
+### 2.3 Repository Pattern ✅ **IMPLEMENTED**
+- **ITodoRepository Interface**: Defines data access contract
+- **MongoTodoRepository**: MongoDB implementation with Mongoose
+- **InMemoryTodoRepository**: Fallback implementation for development/testing
+- **Automatic Fallback**: System automatically uses in-memory storage when MongoDB unavailable
+
+---
+
+## 3. Backend API Design
+
+### 3.1 Architecture Layers
+| Layer | Responsibility | Implementation Status |
+|-------|----------------|----------------------|
+| **Controller** | HTTP endpoints, validation, error handling | ✅ **COMPLETED** |
+| **Service** | Business logic (locking, broadcasting, validation) | ✅ **COMPLETED** |
+| **Repository** | Database operations (CRUD, atomic updates) | ✅ **COMPLETED** |
+| **Socket Layer** | Real-time events & communication | 🚧 **PENDING** |
+| **Model** | Mongoose schema + TypeScript interfaces | ✅ **COMPLETED** |
+
+### 3.2 Design Patterns ✅ **IMPLEMENTED**
+- **Repository Pattern:** Clean DB interaction with interface abstraction
+- **Service Pattern:** Business logic encapsulation with dependency injection
+- **Factory Pattern:** Dependency management and service creation
+- **Singleton Pattern:** Database connection management
+- **Strategy Pattern:** Repository selection (MongoDB vs in-memory)
+
+### 3.3 Todo Model ✅ **IMPLEMENTED**
 ```ts
 interface ITask {
   _id?: ObjectId;
@@ -177,7 +251,7 @@ interface ITask {
 }
 ```
 
-### 2.4 REST API Endpoints
+### 3.4 REST API Endpoints ✅ **IMPLEMENTED**
 
 #### **✅ Currently Implemented**
 | Method | Endpoint | Description | Status |

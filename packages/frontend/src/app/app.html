@@ -1,7 +1,7 @@
 <div class="container">
   <header class="header">
     <h1>{{ title() }}</h1>
-    <p>Testing Frontend to Backend API Connection</p>
+    <p>Testing Frontend to Backend API Connection with Todos</p>
   </header>
 
   <main class="main">
@@ -24,7 +24,7 @@
     }
 
     <!-- Success State -->
-    @if (healthData() && helloData() && !isLoading()) {
+    @if (healthData() && !isLoading()) {
       <div class="success">
         <h3>✅ API Connection Successful!</h3>
         
@@ -34,14 +34,55 @@
             <pre>{{ healthData() | json }}</pre>
           </div>
           
+          @if (helloData()) {
+            <div class="result-card">
+              <h4>Hello Endpoint (/api/hello)</h4>
+              <pre>{{ helloData() | json }}</pre>
+            </div>
+          }
+
           <div class="result-card">
-            <h4>Hello Endpoint (/api/hello)</h4>
-            <pre>{{ helloData() | json }}</pre>
+            <h4>Todos API (/api/todos)</h4>
+            <div class="todos-section">
+              <div class="todos-actions">
+                <button (click)="createTestTodo()" class="create-btn">
+                  ➕ Create Test Todo
+                </button>
+                <button (click)="retryConnection()" class="refresh-btn">
+                  🔄 Refresh Todos
+                </button>
+              </div>
+              
+              @if (todos().length > 0) {
+                <div class="todos-list">
+                  @for (todo of todos(); track todo.id) {
+                    <div class="todo-item" [class.completed]="todo.completed">
+                      <div class="todo-content">
+                        <h5>{{ todo.title }}</h5>
+                        <p>{{ todo.description }}</p>
+                        <span class="priority priority-{{ todo.priority }}">{{ todo.priority }}</span>
+                        <span class="status">{{ todo.completed ? 'Completed' : 'Pending' }}</span>
+                      </div>
+                      <div class="todo-actions">
+                        <button (click)="toggleTodo(todo.id)" class="toggle-btn">
+                          {{ todo.completed ? '↩️ Undo' : '✅ Complete' }}
+                        </button>
+                        <button (click)="deleteTodo(todo.id)" class="delete-btn">
+                          🗑️ Delete
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <p class="no-todos">No todos found. Create one to test the API!</p>
+              }
+            </div>
           </div>
         </div>
 
         <button (click)="retryConnection()" class="test-btn">
-          🧪 Test Again
+          🧪 Test All APIs Again
         </button>
       </div>
     }

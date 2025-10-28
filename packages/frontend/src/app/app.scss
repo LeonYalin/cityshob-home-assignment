@@ -156,3 +156,156 @@
     }
   }
 }
+
+// Todo-specific styles
+.todos-section {
+  margin-top: 1rem;
+}
+
+.todos-actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.create-btn, .refresh-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.create-btn {
+  background: #28a745;
+  color: white;
+
+  &:hover {
+    background: #218838;
+  }
+}
+
+.refresh-btn {
+  background: #007bff;
+  color: white;
+
+  &:hover {
+    background: #0056b3;
+  }
+}
+
+.todos-list {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 1rem;
+}
+
+.todo-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border-left: 4px solid #007bff;
+
+  &.completed {
+    border-left-color: #28a745;
+    opacity: 0.7;
+
+    .todo-content h5 {
+      text-decoration: line-through;
+    }
+  }
+}
+
+.todo-content {
+  flex: 1;
+
+  h5 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+  }
+
+  p {
+    margin: 0 0 0.5rem 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+  }
+}
+
+.priority {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  margin-right: 0.5rem;
+
+  &.priority-low {
+    background: #d4edda;
+    color: #155724;
+  }
+
+  &.priority-medium {
+    background: #fff3cd;
+    color: #856404;
+  }
+
+  &.priority-high {
+    background: #f8d7da;
+    color: #721c24;
+  }
+}
+
+.status {
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.todo-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.toggle-btn, .delete-btn {
+  padding: 0.3rem 0.6rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background-color 0.2s;
+}
+
+.toggle-btn {
+  background: #ffc107;
+  color: #212529;
+
+  &:hover {
+    background: #e0a800;
+  }
+}
+
+.delete-btn {
+  background: #dc3545;
+  color: white;
+
+  &:hover {
+    background: #c82333;
+  }
+}
+
+.no-todos {
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+  padding: 2rem;
+}
