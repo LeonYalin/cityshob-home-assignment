@@ -1,7 +1,7 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { ApiService, HealthResponse, HelloResponse, Todo } from './services/api.service';
+import { ApiService, HealthResponse, Todo } from './services/api.service';
 
 @Component({
   selector: 'app-root',
@@ -13,7 +13,6 @@ export class App implements OnInit {
   protected readonly title = signal('Real-Time Todo App');
   protected readonly isLoading = signal(false);
   protected readonly healthData = signal<HealthResponse | null>(null);
-  protected readonly helloData = signal<HelloResponse | null>(null);
   protected readonly todos = signal<Todo[]>([]);
   protected readonly error = signal<string | null>(null);
 
@@ -36,17 +35,6 @@ export class App implements OnInit {
       error: (err) => {
         this.error.set(`Health check failed: ${err.message}`);
         console.error('Health check error:', err);
-      }
-    });
-
-    // Test hello endpoint (if still exists)
-    this.apiService.getHello().subscribe({
-      next: (data) => {
-        this.helloData.set(data);
-        console.log('Hello endpoint successful:', data);
-      },
-      error: (err) => {
-        console.log('Hello endpoint not found (expected after restructure)');
       }
     });
 

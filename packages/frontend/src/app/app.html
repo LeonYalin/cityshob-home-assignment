@@ -33,13 +33,6 @@
             <h4>Health Check (/api/health)</h4>
             <pre>{{ healthData() | json }}</pre>
           </div>
-          
-          @if (helloData()) {
-            <div class="result-card">
-              <h4>Hello Endpoint (/api/hello)</h4>
-              <pre>{{ helloData() | json }}</pre>
-            </div>
-          }
 
           <div class="result-card">
             <h4>Todos API (/api/todos)</h4>

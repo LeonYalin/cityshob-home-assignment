@@ -10,12 +10,6 @@ export interface HealthResponse {
   uptime: number;
 }
 
-export interface HelloResponse {
-  message: string;
-  timestamp: string;
-  version: string;
-}
-
 export interface Todo {
   id: string;
   title: string;
@@ -49,10 +43,6 @@ export class ApiService {
 
   getHealth(): Observable<HealthResponse> {
     return this.http.get<HealthResponse>(`${this.baseUrl}/health`);
-  }
-
-  getHello(): Observable<HelloResponse> {
-    return this.http.get<HelloResponse>(`${this.baseUrl}/hello`);
   }
 
   // Todo API methods

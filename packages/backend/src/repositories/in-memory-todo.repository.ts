@@ -18,20 +18,9 @@ interface InMemoryTodo {
 }
 
 export class InMemoryTodoRepository implements ITodoRepository {
-  private todos: InMemoryTodo[] = [
-    {
-      id: '1',
-      title: 'Sample Todo',
-      description: 'This is a sample todo item',
-      completed: false,
-      priority: 'medium',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isLocked: false,
-    }
-  ];
+  private todos: InMemoryTodo[] = [];
   
-  private nextId = 2;
+  private nextId = 1;
 
   constructor(private readonly logger: Logger) {}
 
@@ -298,5 +287,11 @@ export class InMemoryTodoRepository implements ITodoRepository {
   async ping(): Promise<boolean> {
     // In-memory repository is always available
     return true;
+  }
+
+  // Test utility method to clear all data
+  clearAll(): void {
+    this.todos = [];
+    this.nextId = 1;
   }
 }

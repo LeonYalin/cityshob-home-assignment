@@ -57,7 +57,8 @@ export const validateSchema = <
           originalQuery: req.query 
         });
         
-        next(new ValidationError(`Validation failed: ${errorMessages.join(', ')}`));
+        const validationErrors = errorMessages.map(msg => ({ message: msg }));
+        next(new ValidationError(validationErrors));
       } else {
         logger.error('Unexpected validation error', error);
         next(error);

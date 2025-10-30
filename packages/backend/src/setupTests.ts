@@ -1,1 +1,1 @@
-import '@jest/globals';
+// Jest setup file

@@ -4,9 +4,10 @@ export class NotFoundError extends BaseError {
   statusCode = 404;
   message: string;
 
-  constructor(message: string = 'Resource not found') {
+  constructor(message: string = 'Not found') {
     super(message);
     this.message = message;
+    this.name = 'NotFoundError';
     Object.setPrototypeOf(this, NotFoundError.prototype);
   }
 
