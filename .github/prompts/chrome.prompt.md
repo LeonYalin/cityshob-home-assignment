@@ -1,0 +1,2 @@
+- use the Chrome mcp server
+- angular frontend should run on localhost:4200
