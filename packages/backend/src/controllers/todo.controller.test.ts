@@ -28,6 +28,12 @@ describe('TodoController', () => {
     app = express();
     app.use(express.json());
 
+    // Mock authentication middleware - add user to request
+    app.use((req: any, res, next) => {
+      req.user = { userId: 'test-user-123', username: 'testuser', email: 'test@example.com' };
+      next();
+    });
+
     // Create mock service
     mockTodoService = {
       getAllTodos: jest.fn(),
@@ -83,7 +89,7 @@ describe('TodoController', () => {
         priority: 'high',
         limit: '10',
         page: '1'
-      });
+      }, 'test-user-123');
     });
 
     it('should handle service errors', async () => {
@@ -120,7 +126,7 @@ describe('TodoController', () => {
         .expect(201);
 
       expect(response.body).toEqual(createdTodo);
-      expect(mockTodoService.createTodo).toHaveBeenCalledWith(createTodoData);
+      expect(mockTodoService.createTodo).toHaveBeenCalledWith(createTodoData, 'test-user-123');
     });
 
     it('should handle validation errors', async () => {

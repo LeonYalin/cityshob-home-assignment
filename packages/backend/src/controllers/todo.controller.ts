@@ -13,8 +13,9 @@ export const todoController = {
     try {
       logger.info('Getting all todos');
       const queryParams = req.query as unknown as TodoQueryParams;
+      const userId = req.user?.userId; // From JWT middleware
       const todoService = await ServiceFactory.getTodoService();
-      const todos = await todoService.getAllTodos(queryParams);
+      const todos = await todoService.getAllTodos(queryParams, userId);
       res.json(todos);
     } catch (error) {
       logger.error('Error getting all todos:', error);
@@ -26,10 +27,16 @@ export const todoController = {
   createTodo: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const todoData = req.body as CreateTodoInput;
-      logger.info(`Creating todo with title: ${todoData.title}`);
+      const userId = req.user?.userId;
+      
+      if (!userId) {
+        throw new NotFoundError('User authentication required');
+      }
+      
+      logger.info(`Creating todo with title: ${todoData.title} for user: ${userId}`);
       
       const todoService = await ServiceFactory.getTodoService();
-      const todo = await todoService.createTodo(todoData);
+      const todo = await todoService.createTodo(todoData, userId);
       
       res.status(201).json(todo);
     } catch (error) {
@@ -111,6 +118,60 @@ export const todoController = {
       res.json(todo);
     } catch (error) {
       logger.error(`Error toggling todo with id ${req.params.id}:`, error);
+      next(error);
+    }
+  },
+
+  // POST /api/todos/:id/lock
+  lockTodo: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params as TodoIdParams;
+      const userId = req.user?.userId;
+      
+      if (!userId) {
+        throw new NotFoundError('User authentication required');
+      }
+      
+      logger.info(`Locking todo with id: ${id} for user: ${userId}`);
+      
+      const todoService = await ServiceFactory.getTodoService();
+      const lockedTodo = await todoService.lockTodo(id, userId);
+      
+      if (!lockedTodo) {
+        return res.status(409).json({
+          success: false,
+          message: 'Todo is already locked by another user or not found'
+        });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Todo locked successfully',
+        data: lockedTodo
+      });
+    } catch (error) {
+      logger.error(`Error locking todo with id ${req.params.id}:`, error);
+      next(error);
+    }
+  },
+
+  // POST /api/todos/:id/unlock
+  unlockTodo: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params as TodoIdParams;
+      const userId = req.user?.userId;
+      
+      logger.info(`Unlocking todo with id: ${id} for user: ${userId}`);
+      
+      const todoService = await ServiceFactory.getTodoService();
+      await todoService.unlockTodo(id, userId);
+      
+      res.json({
+        success: true,
+        message: 'Todo unlocked successfully'
+      });
+    } catch (error) {
+      logger.error(`Error unlocking todo with id ${req.params.id}:`, error);
       next(error);
     }
   }

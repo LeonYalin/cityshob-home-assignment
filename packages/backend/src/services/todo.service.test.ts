@@ -88,7 +88,7 @@ describe('TodoService', () => {
         priority: 'high',
       };
 
-      const todo = await todoService.createTodo(input);
+      const todo = await todoService.createTodo(input, 'test-user-123');
 
       expect(todo.title).toBe('New Todo');
       expect(todo.description).toBe('New Description');
@@ -107,7 +107,7 @@ describe('TodoService', () => {
         priority: 'medium',
       };
 
-      await expect(todoService.createTodo(input)).rejects.toThrow(DatabaseConnectionError);
+      await expect(todoService.createTodo(input, 'test-user-123')).rejects.toThrow(DatabaseConnectionError);
       expect(fakeLogger.hasLogWithMessage('Error creating todo')).toBe(true);
     });
   });

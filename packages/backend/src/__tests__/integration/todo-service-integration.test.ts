@@ -30,7 +30,7 @@ describe('TodoService (Integration-Style Tests)', () => {
       };
 
       // Create todo
-      const createdTodo = await todoService.createTodo(createInput);
+      const createdTodo = await todoService.createTodo(createInput, 'test-user-123');
       expect(createdTodo.title).toBe('Test Todo');
       expect(createdTodo.completed).toBe(false);
       expect(createdTodo.priority).toBe('high');
@@ -54,7 +54,7 @@ describe('TodoService (Integration-Style Tests)', () => {
         priority: 'medium',
       };
 
-      const todo = await todoService.createTodo(createInput);
+      const todo = await todoService.createTodo(createInput, 'test-user-123');
       
       // Lock the todo
       const lockedTodo = await todoService.lockTodo(todo.id);
@@ -80,9 +80,9 @@ describe('TodoService (Integration-Style Tests)', () => {
     it('should handle business logic correctly', async () => {
       // Create multiple todos
       const todos = await Promise.all([
-        todoService.createTodo({ title: 'High Priority', description: 'Urgent', priority: 'high' }),
-        todoService.createTodo({ title: 'Low Priority', description: 'Later', priority: 'low' }),
-        todoService.createTodo({ title: 'Medium Priority', description: 'Normal', priority: 'medium' }),
+        todoService.createTodo({ title: 'High Priority', description: 'Urgent', priority: 'high' }, 'test-user-123'),
+        todoService.createTodo({ title: 'Low Priority', description: 'Later', priority: 'low' }, 'test-user-123'),
+        todoService.createTodo({ title: 'Medium Priority', description: 'Normal', priority: 'medium' }, 'test-user-123'),
       ]);
 
       // Toggle completion
@@ -120,7 +120,7 @@ describe('TodoService (Integration-Style Tests)', () => {
         priority: 'medium',
       };
 
-      const todo = await todoService.createTodo(createInput);
+      const todo = await todoService.createTodo(createInput, 'test-user-123');
 
       // Simulate concurrent lock attempts
       const lockPromise1 = todoService.lockTodo(todo.id);
@@ -146,7 +146,7 @@ describe('TodoService (Integration-Style Tests)', () => {
       };
 
       // Current behavior: service allows empty title (no validation)
-      const result = await todoService.createTodo(invalidInput);
+      const result = await todoService.createTodo(invalidInput, 'test-user-123');
       expect(result.title).toBe(''); // This shows current behavior
       
       // TODO: Add validation to service layer if needed
@@ -160,7 +160,7 @@ describe('TodoService (Integration-Style Tests)', () => {
           title: `Todo ${i + 1}`,
           description: `Description ${i + 1}`,
           priority: 'medium',
-        })
+        }, 'test-user-123')
       );
 
       const todos = await Promise.all(createPromises);

@@ -36,6 +36,7 @@ const mockSchema = jest.fn().mockImplementation(() => ({
   set: jest.fn(),
   virtual: jest.fn(() => ({ get: jest.fn() })),
   statics: {},
+  methods: {},
   index: jest.fn(),
 }));
 

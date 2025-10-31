@@ -128,6 +128,7 @@ describe('RepositoryFactory Unit Tests', () => {
         title: 'Test Todo',
         description: 'Test Description',
         priority: 'medium',
+        createdBy: 'test-user-123',
       });
 
       expect(created).toBeDefined();
@@ -160,6 +161,7 @@ describe('RepositoryFactory Unit Tests', () => {
         title: 'Lockable Todo',
         description: 'Can be locked',
         priority: 'high',
+        createdBy: 'test-user-123',
       });
 
       const locked = await repository.findByIdAndLock(created.id, 'user123');
@@ -178,10 +180,10 @@ describe('RepositoryFactory Unit Tests', () => {
       const repository = await RepositoryFactory.getTodoRepository();
 
       // Create test data
-      await repository.create({ title: 'High Priority', description: 'Urgent', priority: 'high' });
-      await repository.create({ title: 'Low Priority', description: 'Later', priority: 'low' });
-      
-      const todo3 = await repository.create({ title: 'Completed Task', description: 'Done', priority: 'medium' });
+      await repository.create({ title: 'High Priority', description: 'Urgent', priority: 'high', createdBy: 'test-user-123' });
+      await repository.create({ title: 'Low Priority', description: 'Later', priority: 'low', createdBy: 'test-user-123' });
+
+      const todo3 = await repository.create({ title: 'Completed Task', description: 'Done', priority: 'medium', createdBy: 'test-user-123' });
       await repository.toggleCompletion(todo3.id);
 
       // Test queries
@@ -228,9 +230,9 @@ describe('RepositoryFactory Unit Tests', () => {
 
       // Create multiple todos
       const todos = await Promise.all([
-        repository.create({ title: 'Todo 1', description: 'First', priority: 'high' }),
-        repository.create({ title: 'Todo 2', description: 'Second', priority: 'medium' }),
-        repository.create({ title: 'Todo 3', description: 'Third', priority: 'low' }),
+        repository.create({ title: 'Todo 1', description: 'First', priority: 'high', createdBy: 'test-user-123' }),
+        repository.create({ title: 'Todo 2', description: 'Second', priority: 'medium', createdBy: 'test-user-123' }),
+        repository.create({ title: 'Todo 3', description: 'Third', priority: 'low', createdBy: 'test-user-123' }),
       ]);
 
       expect(todos).toHaveLength(3);
@@ -260,7 +262,7 @@ describe('RepositoryFactory Unit Tests', () => {
 
     it('should maintain repository data across factory calls', async () => {
       const repo1 = await RepositoryFactory.getTodoRepository();
-      await repo1.create({ title: 'Persistent Todo', description: 'Should persist', priority: 'medium' });
+      await repo1.create({ title: 'Persistent Todo', description: 'Should persist', priority: 'medium', createdBy: 'test-user-123' });
 
       const repo2 = await RepositoryFactory.getTodoRepository();
       const todos = await repo2.findAll();
@@ -271,7 +273,7 @@ describe('RepositoryFactory Unit Tests', () => {
 
     it('should clear repository data after reset', async () => {
       const repo1 = await RepositoryFactory.getTodoRepository();
-      await repo1.create({ title: 'Temporary Todo', description: 'Will be cleared', priority: 'low' });
+      await repo1.create({ title: 'Temporary Todo', description: 'Will be cleared', priority: 'low', createdBy: 'test-user-123' });
 
       RepositoryFactory.resetRepository();
 

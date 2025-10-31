@@ -108,11 +108,11 @@ describe('InMemoryTodoRepository', () => {
       await repository.create(input1);
       
       // Add small delay to ensure different timestamps
-      await new Promise(resolve => setTimeout(resolve, 1));
+      await new Promise(resolve => setTimeout(resolve, 5));
       const input2 = createValidInput({ title: 'Todo 2' });
       await repository.create(input2);
       
-      await new Promise(resolve => setTimeout(resolve, 1));
+      await new Promise(resolve => setTimeout(resolve, 5));
       const input3 = createValidInput({ title: 'Todo 3' });
       await repository.create(input3);
 
@@ -159,9 +159,9 @@ describe('InMemoryTodoRepository', () => {
 
     test('should support pagination', async () => {
       await repository.create(createValidInput({ title: 'Todo 1' }));
-      await new Promise(resolve => setTimeout(resolve, 1));
+      await new Promise(resolve => setTimeout(resolve, 5));
       await repository.create(createValidInput({ title: 'Todo 2' }));
-      await new Promise(resolve => setTimeout(resolve, 1));
+      await new Promise(resolve => setTimeout(resolve, 5));
       await repository.create(createValidInput({ title: 'Todo 3' }));
 
       const page1 = await repository.findAll({ page: 1, limit: 2 });

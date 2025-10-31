@@ -7,18 +7,19 @@ export interface TodoDoc extends Document {
   description: string;
   completed: boolean;
   priority: Priority;
+  createdBy: string; // User ID who created the todo
   createdAt: Date;
   updatedAt: Date;
   isLocked: boolean;
-  lockedBy?: string;
+  lockedBy?: string; // User ID who locked the todo
   lockedAt?: Date;
 }
 
 // Model interface for static methods
 export interface TodoModel extends Model<TodoDoc> {
-  build(todoData: CreateTodoInput): TodoDoc;
-  findByIdAndLock(id: string, userId?: string): Promise<TodoDoc | null>;
-  unlockTodo(id: string): Promise<void>;
+  build(todoData: CreateTodoInput & { createdBy: string }): TodoDoc;
+  findByIdAndLock(id: string, userId: string): Promise<TodoDoc | null>;
+  unlockTodo(id: string, userId?: string): Promise<void>;
 }
 
 // Mongoose schema definition
@@ -44,6 +45,10 @@ const todoSchema = new Schema<TodoDoc, TodoModel>(
       type: String, 
       enum: ['low', 'medium', 'high'],
       default: 'medium'
+    },
+    createdBy: {
+      type: String,
+      required: true
     },
     isLocked: { 
       type: Boolean, 
@@ -75,11 +80,12 @@ const todoSchema = new Schema<TodoDoc, TodoModel>(
 );
 
 // Static method to build a new todo
-todoSchema.statics.build = function (todoData: CreateTodoInput): TodoDoc {
+todoSchema.statics.build = function (todoData: CreateTodoInput & { createdBy: string }): TodoDoc {
   return new Todo({
     title: todoData.title,
     description: todoData.description || '',
     priority: todoData.priority || 'medium',
+    createdBy: todoData.createdBy,
     completed: false,
     isLocked: false,
   });
@@ -88,13 +94,14 @@ todoSchema.statics.build = function (todoData: CreateTodoInput): TodoDoc {
 // Static method to find and lock a todo for editing
 todoSchema.statics.findByIdAndLock = async function (
   id: string, 
-  userId: string = 'anonymous'
+  userId: string
 ): Promise<TodoDoc | null> {
   const todo = await this.findOneAndUpdate(
     { 
       _id: id, 
       $or: [
         { isLocked: false },
+        { lockedBy: userId }, // User can re-lock their own locked todo
         { lockedAt: { $lt: new Date(Date.now() - 5 * 60 * 1000) } } // 5 minute timeout
       ]
     },
@@ -110,11 +117,22 @@ todoSchema.statics.findByIdAndLock = async function (
 };
 
 // Static method to unlock a todo
-todoSchema.statics.unlockTodo = async function (id: string): Promise<void> {
-  await this.findByIdAndUpdate(id, {
+todoSchema.statics.unlockTodo = async function (id: string, userId?: string): Promise<void> {
+  const updateQuery: any = {
     isLocked: false,
     $unset: { lockedBy: 1, lockedAt: 1 }
-  });
+  };
+
+  // If userId is provided, only unlock if the user owns the lock or if it's expired
+  const findQuery: any = { _id: id };
+  if (userId) {
+    findQuery.$or = [
+      { lockedBy: userId },
+      { lockedAt: { $lt: new Date(Date.now() - 5 * 60 * 1000) } }
+    ];
+  }
+
+  await this.findOneAndUpdate(findQuery, updateQuery);
 };
 
 // Index for better query performance

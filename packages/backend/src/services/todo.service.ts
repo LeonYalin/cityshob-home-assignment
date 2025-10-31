@@ -10,11 +10,14 @@ export class TodoService {
     private readonly logger: Logger
   ) {}
 
-  async getAllTodos(queryParams: TodoQueryParams = { limit: 10, page: 1 }): Promise<TodoDoc[]> {
+  async getAllTodos(
+    queryParams: TodoQueryParams = { limit: 10, page: 1 }, 
+    userId?: string
+  ): Promise<TodoDoc[]> {
     try {
-      this.logger.info('Fetching todos', queryParams);
-      const todos = await this.todoRepository.findAll(queryParams);
-      this.logger.info(`Found ${todos.length} todos`);
+      this.logger.info('Fetching todos', { ...queryParams, userId });
+      const todos = await this.todoRepository.findAll(queryParams, userId);
+      this.logger.info(`Found ${todos.length} todos for user ${userId || 'anonymous'}`);
       return todos;
     } catch (error) {
       this.logger.error('Error fetching todos:', error);
@@ -41,11 +44,12 @@ export class TodoService {
       }
     }
 
-    async createTodo(input: CreateTodoInput): Promise<TodoDoc> {
+    async createTodo(input: CreateTodoInput, userId: string): Promise<TodoDoc> {
       try {
-        this.logger.info('Creating new todo', input);
-        const todo = await this.todoRepository.create(input);
-        this.logger.info(`Created todo with id: ${todo.id}`);
+        this.logger.info('Creating new todo', { ...input, userId });
+        const todoData = { ...input, createdBy: userId };
+        const todo = await this.todoRepository.create(todoData);
+        this.logger.info(`Created todo with id: ${todo.id} for user: ${userId}`);
         return todo;
       } catch (error) {
         this.logger.error('Error creating todo:', error);
@@ -53,10 +57,10 @@ export class TodoService {
       }
     }
 
-    async updateTodo(id: string, updateData: UpdateTodoInput): Promise<TodoDoc | null> {
+    async updateTodo(id: string, updateData: UpdateTodoInput, userId?: string): Promise<TodoDoc | null> {
       try {
-        this.logger.info(`Updating todo with id: ${id}`, updateData);
-        const updatedTodo = await this.todoRepository.update(id, updateData);
+        this.logger.info(`Updating todo with id: ${id}`, { ...updateData, userId });
+        const updatedTodo = await this.todoRepository.update(id, updateData, userId);
         if (updatedTodo) {
           this.logger.info(`Updated todo with id: ${id}`);
         } else {
@@ -126,10 +130,10 @@ export class TodoService {
       }
     }
 
-    async unlockTodo(id: string): Promise<void> {
+    async unlockTodo(id: string, userId?: string): Promise<void> {
       try {
-        this.logger.info(`Unlocking todo with id: ${id}`);
-        await this.todoRepository.unlock(id);
+        this.logger.info(`Unlocking todo with id: ${id} for user: ${userId}`);
+        await this.todoRepository.unlock(id, userId);
         this.logger.info(`Successfully unlocked todo with id: ${id}`);
       } catch (error) {
         this.logger.error(`Error unlocking todo with id ${id}:`, error);
