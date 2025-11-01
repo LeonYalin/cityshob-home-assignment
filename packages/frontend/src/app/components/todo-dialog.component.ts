@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
@@ -212,10 +212,9 @@ export class TodoDialogComponent {
   protected readonly todoForm: FormGroup;
   
   private readonly dialogRef = inject(MatDialogRef<TodoDialogComponent>);
-  private readonly data = inject<TodoDialogData>(MAT_DIALOG_DATA);
   private readonly fb = inject(FormBuilder);
 
-  constructor() {
+  constructor(@Inject(MAT_DIALOG_DATA) private readonly data: TodoDialogData) {
     this.isEditMode.set(this.data.mode === 'edit');
     
     // Initialize form with validation
