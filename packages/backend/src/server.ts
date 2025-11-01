@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import { apiRoutes } from './routes';
 import { errorHandler } from './middleware/error-handler.middleware';
@@ -40,6 +41,7 @@ app.use(cors({
   origin: process.env.SOCKET_ORIGIN_WHITELIST?.split(',') || ['http://localhost:4200'],
   credentials: true,
 }));
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

@@ -11,9 +11,9 @@ import {
 
 const router = Router();
 
-// GET /api/todos - Get all todos (optional authentication)
+// GET /api/todos - Get all todos (requires authentication)
 router.get('/', 
-  AuthMiddleware.optionalAuthenticate,
+  AuthMiddleware.authenticate,
   validateSchema({ query: TodoQuerySchema }),
   todoController.getAllTodos
 );
@@ -25,9 +25,9 @@ router.post('/',
   todoController.createTodo
 );
 
-// GET /api/todos/:id - Get a specific todo (optional authentication)
+// GET /api/todos/:id - Get a specific todo (requires authentication)
 router.get('/:id', 
-  AuthMiddleware.optionalAuthenticate,
+  AuthMiddleware.authenticate,
   validateSchema({ params: TodoIdSchema }),
   todoController.getTodoById
 );

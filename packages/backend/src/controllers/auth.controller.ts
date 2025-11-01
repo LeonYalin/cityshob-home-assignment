@@ -23,10 +23,22 @@ export const authController = {
 
       const result = await authService.register(registerData);
       
+      // Set HTTP-only cookie with the JWT token
+      res.cookie('auth_token', result.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        path: '/'
+      });
+      
       res.status(201).json({
         success: true,
         message: 'User registered successfully',
-        data: result
+        data: {
+          user: result.user
+          // Don't send token in response body for security
+        }
       });
     } catch (error) {
       next(error);
@@ -50,10 +62,22 @@ export const authController = {
 
       const result = await authService.login(loginData);
       
+      // Set HTTP-only cookie with the JWT token
+      res.cookie('auth_token', result.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        path: '/'
+      });
+      
       res.json({
         success: true,
         message: 'Login successful',
-        data: result
+        data: {
+          user: result.user
+          // Don't send token in response body for security
+        }
       });
     } catch (error) {
       next(error);
@@ -95,12 +119,18 @@ export const authController = {
 
   /**
    * POST /api/auth/logout
-   * Logout user (client-side token removal)
+   * Logout user by clearing the authentication cookie
    */
   logout: async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // For JWT, logout is handled client-side by removing the token
-      // Server can optionally maintain a blacklist of tokens
+      // Clear the authentication cookie
+      res.clearCookie('auth_token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/'
+      });
+      
       res.json({
         success: true,
         message: 'Logout successful'

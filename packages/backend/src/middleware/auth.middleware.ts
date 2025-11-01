@@ -16,21 +16,15 @@ export class AuthMiddleware {
 
   /**
    * Middleware to verify JWT token and add user to request
-   * Requires Authorization header with Bearer token
+   * Reads JWT token from HTTP-only cookie for security
    */
   static authenticate = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Get token from Authorization header
-      const authHeader = req.headers.authorization;
-      
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        throw new ValidationError([{ message: 'Access token is required', field: 'authorization' }]);
-      }
-
-      const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+      // Get token from HTTP-only cookie
+      const token = req.cookies?.auth_token;
       
       if (!token) {
-        throw new ValidationError([{ message: 'Access token is required', field: 'authorization' }]);
+        throw new ValidationError([{ message: 'Authentication required', field: 'auth_token' }]);
       }
 
       // Verify token and get user payload
@@ -51,19 +45,15 @@ export class AuthMiddleware {
    */
   static optionalAuthenticate = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const authHeader = req.headers.authorization;
+      const token = req.cookies?.auth_token;
       
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7);
-        
-        if (token) {
-          try {
-            const userPayload = AuthMiddleware.authService.verifyToken(token);
-            req.user = userPayload;
-          } catch (error) {
-            // Ignore token verification errors in optional auth
-            // Just proceed without user
-          }
+      if (token) {
+        try {
+          const userPayload = AuthMiddleware.authService.verifyToken(token);
+          req.user = userPayload;
+        } catch (error) {
+          // Ignore token verification errors in optional auth
+          // Just proceed without user
         }
       }
       

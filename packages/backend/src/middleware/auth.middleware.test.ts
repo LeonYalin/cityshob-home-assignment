@@ -16,6 +16,7 @@ describe('Auth Middleware', () => {
   beforeEach(() => {
     req = {
       headers: {},
+      cookies: {},
       user: undefined
     };
     res = {
@@ -36,13 +37,13 @@ describe('Auth Middleware', () => {
   });
 
   describe('authenticate', () => {
-    it('should authenticate valid token', async () => {
+    it('should authenticate valid token from cookie', async () => {
       const mockUser = { 
         userId: 'test-user-id', 
         username: 'testuser',
         email: 'test@example.com' 
       };
-      req.headers = { authorization: 'Bearer valid-token' };
+      req.cookies = { auth_token: 'valid-token' };
       
       mockAuthService.verifyToken = jest.fn().mockReturnValue(mockUser);
 
@@ -53,24 +54,15 @@ describe('Auth Middleware', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should reject request without authorization header', async () => {
+    it('should reject request without authentication cookie', async () => {
       await AuthMiddleware.authenticate(req as Request, res as Response, next);
 
       expect(next).toHaveBeenCalled();
       expect(mockAuthService.verifyToken).not.toHaveBeenCalled();
     });
 
-    it('should reject request with malformed authorization header', async () => {
-      req.headers = { authorization: 'InvalidFormat' };
-
-      await AuthMiddleware.authenticate(req as Request, res as Response, next);
-
-      expect(next).toHaveBeenCalled();
-      expect(mockAuthService.verifyToken).not.toHaveBeenCalled();
-    });
-
-    it('should reject request with missing Bearer prefix', async () => {
-      req.headers = { authorization: 'valid-token' };
+    it('should reject request with empty cookie', async () => {
+      req.cookies = { auth_token: '' };
 
       await AuthMiddleware.authenticate(req as Request, res as Response, next);
 
@@ -79,7 +71,7 @@ describe('Auth Middleware', () => {
     });
 
     it('should handle token verification errors', async () => {
-      req.headers = { authorization: 'Bearer invalid-token' };
+      req.cookies = { auth_token: 'invalid-token' };
       
       const tokenError = new Error('Invalid token');
       mockAuthService.verifyToken = jest.fn().mockImplementation(() => {
@@ -91,25 +83,16 @@ describe('Auth Middleware', () => {
       expect(mockAuthService.verifyToken).toHaveBeenCalledWith('invalid-token');
       expect(next).toHaveBeenCalled();
     });
-
-    it('should reject empty token after Bearer prefix', async () => {
-      req.headers = { authorization: 'Bearer ' };
-
-      await AuthMiddleware.authenticate(req as Request, res as Response, next);
-
-      expect(next).toHaveBeenCalled();
-      expect(mockAuthService.verifyToken).not.toHaveBeenCalled();
-    });
   });
 
   describe('optionalAuthenticate', () => {
-    it('should authenticate valid token when provided', async () => {
+    it('should authenticate valid token when provided in cookie', async () => {
       const mockUser = { 
         userId: 'test-user-id', 
         username: 'testuser',
         email: 'test@example.com' 
       };
-      req.headers = { authorization: 'Bearer valid-token' };
+      req.cookies = { auth_token: 'valid-token' };
       
       mockAuthService.verifyToken = jest.fn().mockReturnValue(mockUser);
 
@@ -120,7 +103,7 @@ describe('Auth Middleware', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('should proceed without user when no authorization header', async () => {
+    it('should proceed without user when no authentication cookie', async () => {
       await AuthMiddleware.optionalAuthenticate(req as Request, res as Response, next);
 
       expect(req.user).toBeUndefined();
@@ -128,8 +111,8 @@ describe('Auth Middleware', () => {
       expect(mockAuthService.verifyToken).not.toHaveBeenCalled();
     });
 
-    it('should proceed without user when malformed authorization header', async () => {
-      req.headers = { authorization: 'InvalidFormat' };
+    it('should proceed without user when cookie is empty', async () => {
+      req.cookies = { auth_token: '' };
 
       await AuthMiddleware.optionalAuthenticate(req as Request, res as Response, next);
 
@@ -139,7 +122,7 @@ describe('Auth Middleware', () => {
     });
 
     it('should proceed without user when token verification fails', async () => {
-      req.headers = { authorization: 'Bearer invalid-token' };
+      req.cookies = { auth_token: 'invalid-token' };
       
       mockAuthService.verifyToken = jest.fn().mockImplementation(() => {
         throw new Error('Invalid token');

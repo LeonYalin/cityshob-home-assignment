@@ -16,7 +16,7 @@ export interface AuthResponse {
   message: string;
   data: {
     user: User;
-    token: string;
+    // No token in response - it's in HTTP-only cookie
   };
 }
 
@@ -36,8 +36,6 @@ export interface RegisterRequest {
 })
 export class AuthService {
   private readonly API_URL = 'http://localhost:4000/api/auth';
-  private readonly TOKEN_KEY = 'todo_app_token';
-  private readonly USER_KEY = 'todo_app_user';
 
   // Reactive state management
   private readonly currentUserSubject = new BehaviorSubject<User | null>(null);
@@ -52,7 +50,7 @@ export class AuthService {
   public readonly isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
 
   constructor(private http: HttpClient) {
-    this.loadUserFromStorage();
+    this.initializeAuthState();
   }
 
   /**
@@ -63,7 +61,7 @@ export class AuthService {
       .pipe(
         tap(response => {
           if (response.success && response.data) {
-            this.setAuthData(response.data.user, response.data.token);
+            this.setAuthData(response.data.user);
           }
         }),
         catchError(this.handleError)
@@ -78,7 +76,7 @@ export class AuthService {
       .pipe(
         tap(response => {
           if (response.success && response.data) {
-            this.setAuthData(response.data.user, response.data.token);
+            this.setAuthData(response.data.user);
           }
         }),
         catchError(this.handleError)
@@ -116,37 +114,11 @@ export class AuthService {
   }
 
   /**
-   * Get stored JWT token
-   */
-  getToken(): string | null {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(this.TOKEN_KEY);
-    }
-    return null;
-  }
-
-  /**
    * Check if user is authenticated
+   * With cookie-based auth, we check the reactive state
    */
   isLoggedIn(): boolean {
-    const token = this.getToken();
-    if (!token) return false;
-
-    try {
-      // Basic JWT expiration check
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const now = Date.now() / 1000;
-      
-      if (payload.exp < now) {
-        this.clearAuthData();
-        return false;
-      }
-      
-      return true;
-    } catch (error) {
-      this.clearAuthData();
-      return false;
-    }
+    return this.isAuthenticated();
   }
 
   /**
@@ -158,24 +130,16 @@ export class AuthService {
 
   /**
    * Set authentication data after successful login/register
+   * With cookie-based auth, we only keep user data in memory, token is in HTTP-only cookie
    */
-  private setAuthData(user: User, token: string): void {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(this.TOKEN_KEY, token);
-      localStorage.setItem(this.USER_KEY, JSON.stringify(user));
-    }
-    
+  private setAuthData(user: User): void {
     this.updateAuthState(user, true);
   }
 
   /**
-   * Update user data without changing token
+   * Update user data without changing authentication state
    */
   private updateUser(user: User): void {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(this.USER_KEY, JSON.stringify(user));
-    }
-    
     this.currentUser.set(user);
     this.currentUserSubject.next(user);
   }
@@ -192,35 +156,32 @@ export class AuthService {
 
   /**
    * Clear all authentication data
+   * With cookie-based auth, we only clear memory state, server will clear cookie
    */
   private clearAuthData(): void {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(this.TOKEN_KEY);
-      localStorage.removeItem(this.USER_KEY);
-    }
-    
     this.updateAuthState(null, false);
   }
 
   /**
-   * Load user data from localStorage on app init
+   * Initialize authentication state on app startup
+   * With cookie-based auth, we check if user is authenticated by calling the server
+   * The server will validate the HTTP-only cookie automatically
    */
-  private loadUserFromStorage(): void {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem(this.TOKEN_KEY);
-      const userStr = localStorage.getItem(this.USER_KEY);
-      
-      if (token && userStr && this.isLoggedIn()) {
-        try {
-          const user: User = JSON.parse(userStr);
-          this.updateAuthState(user, true);
-        } catch (error) {
-          this.clearAuthData();
+  private initializeAuthState(): void {
+    // Check authentication status with server by calling /me endpoint
+    // If cookie exists and is valid, we'll get user data back
+    this.getCurrentUser().subscribe({
+      next: (response) => {
+        if (response.success && response.data.user) {
+          // User is authenticated, set state
+          this.updateAuthState(response.data.user, true);
         }
-      } else {
-        this.clearAuthData();
+      },
+      error: () => {
+        // No valid authentication, ensure state is clear
+        this.updateAuthState(null, false);
       }
-    }
+    });
   }
 
   /**

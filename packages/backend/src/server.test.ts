@@ -20,3 +20,43 @@ describe('Server Health Check', () => {
     expect(response.body.error).toBe('API endpoint not found');
   });
 });
+
+describe('Todo API Authentication', () => {
+  describe('GET /api/todos', () => {
+    it('should require authentication', async () => {
+      const response = await request(app)
+        .get('/api/todos')
+        .expect(400);
+
+      expect(response.body.errors[0].message).toBe('Authentication required');
+    });
+
+    it('should reject invalid JWT token', async () => {
+      const response = await request(app)
+        .get('/api/todos')
+        .set('Cookie', 'auth_token=invalid-token')
+        .expect(400);
+
+      expect(response.body.errors[0].message).toBe('Invalid or expired token');
+    });
+  });
+
+  describe('GET /api/todos/:id', () => {
+    it('should require authentication', async () => {
+      const response = await request(app)
+        .get('/api/todos/123')
+        .expect(400);
+
+      expect(response.body.errors[0].message).toBe('Authentication required');
+    });
+
+    it('should reject invalid JWT token', async () => {
+      const response = await request(app)
+        .get('/api/todos/123')
+        .set('Cookie', 'auth_token=invalid-token')
+        .expect(400);
+
+      expect(response.body.errors[0].message).toBe('Invalid or expired token');
+    });
+  });
+});

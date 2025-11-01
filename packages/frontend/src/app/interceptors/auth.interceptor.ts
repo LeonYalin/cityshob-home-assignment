@@ -6,16 +6,11 @@ import { AuthService } from '../services/auth.service';
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   
-  // Get the auth token from the service
-  const token = authService.getToken();
-  
-  // Clone the request and add the authorization header if token exists
-  let authReq = req;
-  if (token) {
-    authReq = req.clone({
-      headers: req.headers.set('Authorization', `Bearer ${token}`)
-    });
-  }
+  // For cookie-based auth, we need to include credentials in all requests
+  const authReq = req.clone({
+    setHeaders: {},
+    withCredentials: true
+  });
 
   // Handle the request and catch any auth errors
   return next(authReq).pipe(
