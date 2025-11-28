@@ -1,5 +1,6 @@
 import { Document, Model, Schema, model } from 'mongoose';
-import { CreateTodoInput, Priority } from '../schemas/todo.schema';
+import { CreateTodoInput } from '../schemas/todo.schema';
+import type { Priority } from '@real-time-todo/common';
 
 // Document interface extending Mongoose Document
 export interface TodoDoc extends Document {

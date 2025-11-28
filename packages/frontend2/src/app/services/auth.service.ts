@@ -1,41 +1,23 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, BehaviorSubject, of } from 'rxjs';
 import { map, catchError, tap } from 'rxjs/operators';
-
-export interface User {
-  id: string;
-  username: string;
-  email: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface AuthResponse {
-  success: boolean;
-  message: string;
-  data: {
-    user: User;
-    // No token in response - it's in HTTP-only cookie
-  };
-}
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface RegisterRequest {
-  username: string;
-  email: string;
-  password: string;
-}
+import { 
+  type User, 
+  type LoginRequest, 
+  type RegisterRequest, 
+  type LoginResponse, 
+  type RegisterResponse, 
+  type LogoutResponse, 
+  type GetCurrentUserResponse 
+} from '@real-time-todo/common';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
   private readonly API_URL = 'http://localhost:4000/api/auth';
+  private readonly http = inject(HttpClient);
 
   // Reactive state management
   private readonly currentUserSubject = new BehaviorSubject<User | null>(null);
@@ -51,15 +33,25 @@ export class AuthService {
   public readonly isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
   public readonly isAuthInitialized$ = this.isAuthInitializedSubject.asObservable();
 
-  constructor(private http: HttpClient) {
+  // WebSocket service - lazy loaded to avoid circular dependency
+  private wsService: { connect: () => void; disconnect: () => void } | null = null;
+
+  constructor() {
     this.initializeAuthState();
+  }
+
+  /**
+   * Set WebSocket service (called after WebSocket service is initialized)
+   */
+  setWebSocketService(wsService: { connect: () => void; disconnect: () => void }): void {
+    this.wsService = wsService;
   }
 
   /**
    * Login user with email and password
    */
-  login(loginData: LoginRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.API_URL}/login`, loginData)
+  login(loginData: LoginRequest): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.API_URL}/login`, loginData)
       .pipe(
         tap(response => {
           if (response.success && response.data) {
@@ -73,8 +65,8 @@ export class AuthService {
   /**
    * Register new user
    */
-  register(registerData: RegisterRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.API_URL}/register`, registerData)
+  register(registerData: RegisterRequest): Observable<RegisterResponse> {
+    return this.http.post<RegisterResponse>(`${this.API_URL}/register`, registerData)
       .pipe(
         tap(response => {
           if (response.success && response.data) {
@@ -88,14 +80,14 @@ export class AuthService {
   /**
    * Logout user and clear all auth data
    */
-  logout(): Observable<any> {
-    return this.http.post(`${this.API_URL}/logout`, {})
+  logout(): Observable<LogoutResponse> {
+    return this.http.post<LogoutResponse>(`${this.API_URL}/logout`, {})
       .pipe(
         tap(() => this.clearAuthData()),
         catchError(() => {
           // Even if logout fails on server, clear local data
           this.clearAuthData();
-          return of(null);
+          return of({ success: true, message: 'Logged out locally' });
         })
       );
   }
@@ -103,8 +95,8 @@ export class AuthService {
   /**
    * Get current user profile from server
    */
-  getCurrentUser(): Observable<{ success: boolean; data: { user: User } }> {
-    return this.http.get<{ success: boolean; data: { user: User } }>(`${this.API_URL}/me`)
+  getCurrentUser(): Observable<GetCurrentUserResponse> {
+    return this.http.get<GetCurrentUserResponse>(`${this.API_URL}/me`)
       .pipe(
         tap(response => {
           if (response.success && response.data.user) {
@@ -136,6 +128,11 @@ export class AuthService {
    */
   private setAuthData(user: User): void {
     this.updateAuthState(user, true);
+    
+    // Connect WebSocket after successful login
+    if (this.wsService) {
+      this.wsService.connect();
+    }
   }
 
   /**
@@ -162,6 +159,11 @@ export class AuthService {
    */
   private clearAuthData(): void {
     this.updateAuthState(null, false);
+    
+    // Disconnect WebSocket on logout
+    if (this.wsService) {
+      this.wsService.disconnect();
+    }
   }
 
   /**
@@ -172,7 +174,7 @@ export class AuthService {
   private initializeAuthState(): void {
     // Check authentication status with server by calling /me endpoint
     // If cookie exists and is valid, we'll get user data back
-    this.http.get<{ success: boolean; data: { user: User } }>(`${this.API_URL}/me`).pipe(
+    this.http.get<GetCurrentUserResponse>(`${this.API_URL}/me`).pipe(
       tap(response => {
         if (response.success && response.data.user) {
           this.updateUser(response.data.user);
@@ -188,6 +190,11 @@ export class AuthService {
         if (response && response.success && response.data.user) {
           // User is authenticated, set state
           this.updateAuthState(response.data.user, true);
+          
+          // Connect WebSocket if user is authenticated
+          if (this.wsService) {
+            this.wsService.connect();
+          }
         } else {
           // No valid authentication, ensure state is clear
           this.updateAuthState(null, false);

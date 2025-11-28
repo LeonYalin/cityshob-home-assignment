@@ -3,9 +3,39 @@ import { ServiceFactory } from '../services/service.factory';
 import { NotFoundError } from '../errors';
 import { Logger } from '../services/logger.service';
 import { CreateTodoInput, UpdateTodoInput, TodoIdParams, TodoQueryParams } from '../schemas/todo.schema';
+import { getSocketService } from '../server';
+import type {
+  CreateTodoResponse,
+  GetTodoResponse,
+  GetTodosResponse,
+  UpdateTodoResponse,
+  DeleteTodoResponse,
+  ToggleTodoResponse,
+  LockTodoResponse,
+  UnlockTodoResponse,
+  Todo
+} from '@real-time-todo/common';
+import { TodoDoc } from '../models/todo.model';
 
 // Create a shared logger instance for the todo controller module
 const logger = new Logger('TodoController');
+
+/**
+ * Convert TodoDoc to Todo type
+ */
+export function todoDocToTodo(doc: TodoDoc): Todo {
+  const json = doc.toJSON();
+  return {
+    id: json.id || doc._id.toString(),
+    title: json.title,
+    description: json.description,
+    completed: json.completed,
+    priority: json.priority,
+    createdBy: json.createdBy,
+    createdAt: json.createdAt.toISOString(),
+    updatedAt: json.updatedAt.toISOString()
+  };
+}
 
 export const todoController = {
   // GET /api/todos
@@ -16,7 +46,11 @@ export const todoController = {
       const userId = req.user?.userId; // From JWT middleware
       const todoService = await ServiceFactory.getTodoService();
       const todos = await todoService.getAllTodos(queryParams, userId);
-      res.json(todos);
+      
+      res.json({
+        success: true,
+        data: todos.map(todoDocToTodo)
+      } satisfies GetTodosResponse);
     } catch (error) {
       logger.error('Error getting all todos:', error);
       next(error);
@@ -28,8 +62,9 @@ export const todoController = {
     try {
       const todoData = req.body as CreateTodoInput;
       const userId = req.user?.userId;
+      const username = req.user?.username;
       
-      if (!userId) {
+      if (!userId || !username) {
         throw new NotFoundError('User authentication required');
       }
       
@@ -38,7 +73,17 @@ export const todoController = {
       const todoService = await ServiceFactory.getTodoService();
       const todo = await todoService.createTodo(todoData, userId);
       
-      res.status(201).json(todo);
+      // Broadcast socket event
+      const socketService = getSocketService();
+      if (socketService) {
+        socketService.broadcastTodoCreated(todo, userId, username);
+      }
+      
+      res.status(201).json({
+        success: true,
+        message: 'Todo created successfully',
+        data: todoDocToTodo(todo)
+      } satisfies CreateTodoResponse);
     } catch (error) {
       logger.error('Error creating todo:', error);
       next(error);
@@ -57,7 +102,10 @@ export const todoController = {
         throw new NotFoundError(`Todo with id ${id} not found`);
       }
       
-      res.json(todo);
+      res.json({
+        success: true,
+        data: todoDocToTodo(todo)
+      } satisfies GetTodoResponse);
     } catch (error) {
       logger.error(`Error getting todo with id ${req.params.id}:`, error);
       next(error);
@@ -69,6 +117,9 @@ export const todoController = {
     try {
       const { id } = req.params as TodoIdParams;
       const updateData = req.body as UpdateTodoInput;
+      const userId = req.user?.userId;
+      const username = req.user?.username;
+      
       logger.info(`Updating todo with id: ${id}`);
       
       const todoService = await ServiceFactory.getTodoService();
@@ -77,7 +128,17 @@ export const todoController = {
         throw new NotFoundError(`Todo with id ${id} not found`);
       }
       
-      res.json(todo);
+      // Broadcast socket event
+      const socketService = getSocketService();
+      if (socketService && userId && username) {
+        socketService.broadcastTodoUpdated(todo, userId, username);
+      }
+      
+      res.json({
+        success: true,
+        message: 'Todo updated successfully',
+        data: todoDocToTodo(todo)
+      } satisfies UpdateTodoResponse);
     } catch (error) {
       logger.error(`Error updating todo with id ${req.params.id}:`, error);
       next(error);
@@ -88,12 +149,21 @@ export const todoController = {
   deleteTodo: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params as TodoIdParams;
+      const userId = req.user?.userId;
+      const username = req.user?.username;
+      
       logger.info(`Deleting todo with id: ${id}`);
       
       const todoService = await ServiceFactory.getTodoService();
       const deleted = await todoService.deleteTodo(id);
       if (!deleted) {
         throw new NotFoundError(`Todo with id ${id} not found`);
+      }
+      
+      // Broadcast socket event
+      const socketService = getSocketService();
+      if (socketService && userId && username) {
+        socketService.broadcastTodoDeleted(id, userId, username);
       }
       
       res.status(204).send();
@@ -107,6 +177,9 @@ export const todoController = {
   toggleTodo: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params as TodoIdParams;
+      const userId = req.user?.userId;
+      const username = req.user?.username;
+      
       logger.info(`Toggling todo with id: ${id}`);
       
       const todoService = await ServiceFactory.getTodoService();
@@ -115,7 +188,17 @@ export const todoController = {
         throw new NotFoundError(`Todo with id ${id} not found`);
       }
       
-      res.json(todo);
+      // Broadcast socket event
+      const socketService = getSocketService();
+      if (socketService && userId && username) {
+        socketService.broadcastTodoUpdated(todo, userId, username);
+      }
+      
+      res.json({
+        success: true,
+        message: 'Todo toggled successfully',
+        data: todoDocToTodo(todo)
+      } satisfies ToggleTodoResponse);
     } catch (error) {
       logger.error(`Error toggling todo with id ${req.params.id}:`, error);
       next(error);
@@ -127,8 +210,9 @@ export const todoController = {
     try {
       const { id } = req.params as TodoIdParams;
       const userId = req.user?.userId;
+      const username = req.user?.username;
       
-      if (!userId) {
+      if (!userId || !username) {
         throw new NotFoundError('User authentication required');
       }
       
@@ -144,11 +228,17 @@ export const todoController = {
         });
       }
       
+      // Broadcast socket event
+      const socketService = getSocketService();
+      if (socketService) {
+        socketService.broadcastTodoLocked(id, userId, username);
+      }
+      
       res.json({
         success: true,
         message: 'Todo locked successfully',
-        data: lockedTodo
-      });
+        data: todoDocToTodo(lockedTodo)
+      } satisfies LockTodoResponse);
     } catch (error) {
       logger.error(`Error locking todo with id ${req.params.id}:`, error);
       next(error);
@@ -166,10 +256,16 @@ export const todoController = {
       const todoService = await ServiceFactory.getTodoService();
       await todoService.unlockTodo(id, userId);
       
+      // Broadcast socket event
+      const socketService = getSocketService();
+      if (socketService && userId) {
+        socketService.broadcastTodoUnlocked(id, userId);
+      }
+      
       res.json({
         success: true,
         message: 'Todo unlocked successfully'
-      });
+      } satisfies UnlockTodoResponse);
     } catch (error) {
       logger.error(`Error unlocking todo with id ${req.params.id}:`, error);
       next(error);

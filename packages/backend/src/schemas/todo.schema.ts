@@ -63,14 +63,3 @@ export type UpdateTodoInput = z.infer<typeof UpdateTodoSchema>;
 export type TodoIdParams = z.infer<typeof TodoIdSchema>;
 export type TodoQueryParams = z.infer<typeof TodoQuerySchema>;
 export type Priority = z.infer<typeof PrioritySchema>;
-
-// Complete Todo interface (what gets returned from database)
-export interface Todo {
-  id: string;
-  title: string;
-  description: string;
-  completed: boolean;
-  priority: Priority;
-  createdAt: Date;
-  updatedAt: Date;
-}

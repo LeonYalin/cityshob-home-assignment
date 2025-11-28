@@ -1,6 +1,7 @@
 import { ITodoRepository } from '../../repositories/interfaces/todo-repository.interface';
 import { TodoDoc } from '../../models/todo.model';
-import { CreateTodoInput, UpdateTodoInput, TodoQueryParams, Priority } from '../../schemas/todo.schema';
+import { CreateTodoInput, UpdateTodoInput, TodoQueryParams } from '../../schemas/todo.schema';
+import type { Priority } from '@real-time-todo/common';
 
 // Simplified Todo type for testing (without Mongoose Document methods)
 interface SimpleTodo {

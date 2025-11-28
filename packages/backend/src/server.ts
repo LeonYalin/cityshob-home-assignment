@@ -4,11 +4,13 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import { createServer } from 'http';
 import { apiRoutes } from './routes';
 import { errorHandler } from './middleware/error-handler.middleware';
 import { morganMiddleware } from './middleware/morgan.middleware';
 import { Logger } from './services/logger.service';
 import { ServiceFactory } from './services/service.factory';
+import { SocketService } from './socket/socket.service';
 
 // Load environment variables
 dotenv.config();
@@ -89,19 +91,29 @@ app.use('/api/*', (req, res) => {
 app.use(errorHandler);
 
 // Start server with database initialization
+let socketService: SocketService;
+
 const startServer = async () => {
   try {
     // Initialize database first
     await initializeDatabase();
     
+    // Create HTTP server from Express app
+    const httpServer = createServer(app);
+    
+    // Initialize Socket.IO
+    socketService = new SocketService(httpServer);
+    logger.info('✓ Socket.IO service initialized');
+    
     // Start server
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
       const databaseService = ServiceFactory.getDatabaseService();
       
       logger.info(`🚀 Server running on http://localhost:${PORT}`);
       logger.info(`📋 Environment: ${NODE_ENV}`);
       logger.info(`🔍 Health check: http://localhost:${PORT}/api/health`);
       logger.info(`📋 Todos API: http://localhost:${PORT}/api/todos`);
+      logger.info(`🔌 WebSocket: Available on port ${PORT}`);
       
       if (databaseService.getConnectionStatus()) {
         logger.info(`🗄️ Database: Connected to MongoDB`);
@@ -121,6 +133,9 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
+// Export socketService getter
+export const getSocketService = () => socketService;
 
 // Handle graceful shutdown
 process.on('SIGTERM', async () => {

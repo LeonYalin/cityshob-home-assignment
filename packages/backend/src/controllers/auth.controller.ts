@@ -2,6 +2,12 @@ import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service';
 import { LoginInput, RegisterInput } from '../schemas/auth.schema';
 import { ValidationError } from '../errors';
+import type { 
+  RegisterResponse, 
+  LoginResponse, 
+  GetCurrentUserResponse, 
+  LogoutResponse 
+} from '@real-time-todo/common';
 
 const authService = new AuthService();
 
@@ -36,10 +42,16 @@ export const authController = {
         success: true,
         message: 'User registered successfully',
         data: {
-          user: result.user
+          user: {
+            id: result.user.id,
+            username: result.user.username,
+            email: result.user.email,
+            createdAt: result.user.createdAt.toISOString(),
+            updatedAt: result.user.updatedAt.toISOString()
+          }
           // Don't send token in response body for security
         }
-      });
+      } satisfies RegisterResponse);
     } catch (error) {
       next(error);
     }
@@ -75,10 +87,16 @@ export const authController = {
         success: true,
         message: 'Login successful',
         data: {
-          user: result.user
+          user: {
+            id: result.user.id,
+            username: result.user.username,
+            email: result.user.email,
+            createdAt: result.user.createdAt.toISOString(),
+            updatedAt: result.user.updatedAt.toISOString()
+          }
           // Don't send token in response body for security
         }
-      });
+      } satisfies LoginResponse);
     } catch (error) {
       next(error);
     }
@@ -107,11 +125,11 @@ export const authController = {
             id: user.id,
             username: user.username,
             email: user.email,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt
+            createdAt: user.createdAt.toISOString(),
+            updatedAt: user.updatedAt.toISOString()
           }
         }
-      });
+      } satisfies GetCurrentUserResponse);
     } catch (error) {
       next(error);
     }
@@ -134,7 +152,7 @@ export const authController = {
       res.json({
         success: true,
         message: 'Logout successful'
-      });
+      } satisfies LogoutResponse);
     } catch (error) {
       next(error);
     }

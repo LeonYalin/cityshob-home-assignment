@@ -9,7 +9,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { AuthService, LoginRequest } from '../services/auth.service';
+import { AuthService } from '../services/auth.service';
+import { type LoginRequest } from '@real-time-todo/common';
 
 @Component({
   selector: 'app-login',

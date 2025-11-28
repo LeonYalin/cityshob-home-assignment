@@ -17,8 +17,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { type Todo, type CreateTodoRequest, type UpdateTodoRequest } from '@real-time-todo/common';
 
-import { ApiService, Todo, TodoInput, TodoUpdate } from '../services/api.service';
+import { ApiService } from '../services/api.service';
 import { AuthService } from '../services/auth.service';
 import { TodoDialogComponent } from './todo-dialog.component';
 
@@ -521,7 +522,7 @@ export class TodoListComponent implements OnInit {
     });
   }
 
-  createTodo(todoData: TodoInput) {
+  createTodo(todoData: CreateTodoRequest) {
     this.apiService.createTodo(todoData).subscribe({
       next: (newTodo) => {
         this.todos.update(todos => [newTodo, ...todos]);
@@ -550,7 +551,7 @@ export class TodoListComponent implements OnInit {
     });
   }
 
-  updateTodo(id: string, updateData: TodoUpdate) {
+  updateTodo(id: string, updateData: UpdateTodoRequest) {
     this.apiService.updateTodo(id, updateData).subscribe({
       next: (updatedTodo) => {
         this.todos.update(todos => 
@@ -566,7 +567,7 @@ export class TodoListComponent implements OnInit {
   }
 
   toggleComplete(todo: Todo) {
-    const updateData: TodoUpdate = { completed: !todo.completed };
+    const updateData: UpdateTodoRequest = { completed: !todo.completed };
     this.updateTodo(todo.id, updateData);
   }
 
