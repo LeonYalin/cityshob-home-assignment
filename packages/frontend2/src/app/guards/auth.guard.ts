@@ -1,24 +1,28 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { CanActivate, Router, UrlTree } from '@angular/router';
-import { Observable } from 'rxjs';
+import { Observable, map, take, filter } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthGuard implements CanActivate {
-  constructor(
-    private authService: AuthService,
-    private router: Router
-  ) {}
+  private authService = inject(AuthService);
+  private router = inject(Router);
 
-  canActivate(): Observable<boolean | UrlTree> | Promise<boolean | UrlTree> | boolean | UrlTree {
-    if (this.authService.isLoggedIn()) {
-      return true;
-    } else {
-      // Redirect to login page if not authenticated
-      return this.router.createUrlTree(['/login']);
-    }
+  canActivate(): Observable<boolean | UrlTree> {
+    // Wait for auth initialization to complete, then check authentication
+    return this.authService.isAuthInitialized$.pipe(
+      filter(initialized => initialized === true),
+      take(1),
+      map(() => {
+        if (this.authService.isLoggedIn()) {
+          return true;
+        } else {
+          return this.router.createUrlTree(['/login']);
+        }
+      })
+    );
   }
 }
 
@@ -26,17 +30,21 @@ export class AuthGuard implements CanActivate {
   providedIn: 'root'
 })
 export class NoAuthGuard implements CanActivate {
-  constructor(
-    private authService: AuthService,
-    private router: Router
-  ) {}
+  private authService = inject(AuthService);
+  private router = inject(Router);
 
-  canActivate(): Observable<boolean | UrlTree> | Promise<boolean | UrlTree> | boolean | UrlTree {
-    if (!this.authService.isLoggedIn()) {
-      return true;
-    } else {
-      // Redirect to dashboard if already authenticated
-      return this.router.createUrlTree(['/todos']);
-    }
+  canActivate(): Observable<boolean | UrlTree> {
+    // Wait for auth initialization to complete, then check authentication
+    return this.authService.isAuthInitialized$.pipe(
+      filter(initialized => initialized === true),
+      take(1),
+      map(() => {
+        if (!this.authService.isLoggedIn()) {
+          return true;
+        } else {
+          return this.router.createUrlTree(['/todos']);
+        }
+      })
+    );
   }
 }

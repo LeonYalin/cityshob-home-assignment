@@ -1,6 +1,7 @@
 import { Component, signal, inject, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -18,6 +19,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { ApiService, Todo, TodoInput, TodoUpdate } from '../services/api.service';
+import { AuthService } from '../services/auth.service';
 import { TodoDialogComponent } from './todo-dialog.component';
 
 @Component({
@@ -56,6 +58,14 @@ import { TodoDialogComponent } from './todo-dialog.component';
         >
           <mat-icon>add</mat-icon>
           Add Todo
+        </button>
+        <button 
+          mat-icon-button
+          (click)="logout()"
+          class="logout-button"
+          matTooltip="Logout"
+        >
+          <mat-icon>logout</mat-icon>
         </button>
       </mat-toolbar>
 
@@ -242,6 +252,10 @@ import { TodoDialogComponent } from './todo-dialog.component';
       display: flex;
       align-items: center;
       gap: 8px;
+    }
+
+    .logout-button {
+      margin-left: 8px;
     }
 
     .stats-row {
@@ -465,8 +479,10 @@ export class TodoListComponent implements OnInit {
 
   // Injected services
   private readonly apiService = inject(ApiService);
+  private readonly authService = inject(AuthService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly router = inject(Router);
 
   ngOnInit() {
     this.loadTodos();
@@ -576,6 +592,19 @@ export class TodoListComponent implements OnInit {
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
+    });
+  }
+
+  logout() {
+    this.authService.logout().subscribe({
+      next: () => {
+        this.showSnackBar('Logged out successfully', 'success');
+        this.router.navigate(['/login']);
+      },
+      error: () => {
+        // Even on error, navigate to login
+        this.router.navigate(['/login']);
+      }
     });
   }
 

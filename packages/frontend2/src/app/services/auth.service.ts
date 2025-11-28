@@ -40,6 +40,7 @@ export class AuthService {
   // Reactive state management
   private readonly currentUserSubject = new BehaviorSubject<User | null>(null);
   private readonly isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
+  private readonly isAuthInitializedSubject = new BehaviorSubject<boolean>(false);
   
   // Angular signals for modern reactive programming
   public readonly currentUser = signal<User | null>(null);
@@ -48,6 +49,7 @@ export class AuthService {
   // Observables for compatibility
   public readonly currentUser$ = this.currentUserSubject.asObservable();
   public readonly isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
+  public readonly isAuthInitialized$ = this.isAuthInitializedSubject.asObservable();
 
   constructor(private http: HttpClient) {
     this.initializeAuthState();
@@ -170,16 +172,33 @@ export class AuthService {
   private initializeAuthState(): void {
     // Check authentication status with server by calling /me endpoint
     // If cookie exists and is valid, we'll get user data back
-    this.getCurrentUser().subscribe({
-      next: (response) => {
+    this.http.get<{ success: boolean; data: { user: User } }>(`${this.API_URL}/me`).pipe(
+      tap(response => {
         if (response.success && response.data.user) {
+          this.updateUser(response.data.user);
+        }
+      }),
+      catchError(() => {
+        // On error during initialization, just return empty - don't call forceLogout
+        // This is expected when user is not authenticated
+        return of(null as any);
+      })
+    ).subscribe({
+      next: (response) => {
+        if (response && response.success && response.data.user) {
           // User is authenticated, set state
           this.updateAuthState(response.data.user, true);
+        } else {
+          // No valid authentication, ensure state is clear
+          this.updateAuthState(null, false);
         }
+        // Mark initialization as complete
+        this.isAuthInitializedSubject.next(true);
       },
       error: () => {
-        // No valid authentication, ensure state is clear
+        // This shouldn't happen since we catch errors above, but just in case
         this.updateAuthState(null, false);
+        this.isAuthInitializedSubject.next(true);
       }
     });
   }
