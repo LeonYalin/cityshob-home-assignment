@@ -1,6 +1,6 @@
 import { TodoDoc } from '../models/todo.model';
 import { CreateTodoInput, UpdateTodoInput, TodoQueryParams } from '../schemas/todo.schema';
-import { NotFoundError, DatabaseConnectionError } from '../errors';
+import { NotFoundError, DatabaseConnectionError, TodoLockError } from '../errors';
 import { Logger } from './logger.service';
 import { ITodoRepository } from '../repositories/interfaces/todo-repository.interface';
 
@@ -69,6 +69,9 @@ export class TodoService {
         return updatedTodo;
       } catch (error) {
         this.logger.error(`Error updating todo with id ${id}:`, error);
+        if (error instanceof TodoLockError) {
+          throw error;
+        }
         if (error instanceof Error && error.name === 'CastError') {
           throw new NotFoundError(`Invalid todo ID format: ${id}`);
         }
@@ -76,10 +79,10 @@ export class TodoService {
       }
     }
 
-    async deleteTodo(id: string): Promise<boolean> {
+    async deleteTodo(id: string, userId?: string): Promise<boolean> {
       try {
         this.logger.info(`Deleting todo with id: ${id}`);
-        const deleted = await this.todoRepository.delete(id);
+        const deleted = await this.todoRepository.delete(id, userId);
         if (deleted) {
           this.logger.info(`Deleted todo with id: ${id}`);
         } else {
@@ -88,6 +91,9 @@ export class TodoService {
         return deleted;
       } catch (error) {
         this.logger.error(`Error deleting todo with id ${id}:`, error);
+        if (error instanceof TodoLockError) {
+          throw error;
+        }
         if (error instanceof Error && error.name === 'CastError') {
           throw new NotFoundError(`Invalid todo ID format: ${id}`);
         }

@@ -239,7 +239,7 @@ describe('TodoController', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('Todo updated successfully');
       expect(response.body.data.id).toBe(todoId);
-      expect(mockTodoService.updateTodo).toHaveBeenCalledWith(todoId, updateData);
+      expect(mockTodoService.updateTodo).toHaveBeenCalledWith(todoId, updateData, 'test-user-123');
     });
 
     it('should handle update errors', async () => {
@@ -268,7 +268,7 @@ describe('TodoController', () => {
         .delete(`/todos/${todoId}`)
         .expect(204);
 
-      expect(mockTodoService.deleteTodo).toHaveBeenCalledWith(todoId);
+      expect(mockTodoService.deleteTodo).toHaveBeenCalledWith(todoId, 'test-user-123');
     });
 
     it('should handle delete failures', async () => {

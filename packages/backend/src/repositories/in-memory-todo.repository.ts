@@ -2,6 +2,7 @@ import { TodoDoc } from '../models/todo.model';
 import { CreateTodoInput, UpdateTodoInput, TodoQueryParams } from '../schemas/todo.schema';
 import { ITodoRepository } from './interfaces/todo-repository.interface';
 import { Logger } from '../services/logger.service';
+import { TodoLockError } from '../errors';
 
 // In-memory Todo implementation for fallback mode
 interface InMemoryTodo {
@@ -10,11 +11,12 @@ interface InMemoryTodo {
   description: string;
   completed: boolean;
   priority: 'low' | 'medium' | 'high';
+  createdBy: string;
   createdAt: Date;
   updatedAt: Date;
   isLocked: boolean;
-  lockedBy?: string;
-  lockedAt?: Date;
+  lockedBy: string | null;
+  lockedAt: Date | null;
 }
 
 export class InMemoryTodoRepository implements ITodoRepository {
@@ -23,6 +25,47 @@ export class InMemoryTodoRepository implements ITodoRepository {
   private nextId = 1;
 
   constructor(private readonly logger: Logger) {}
+
+  /**
+   * Convert InMemoryTodo to TodoDoc-like object with toJSON method
+   */
+  private toTodoDoc(todo: InMemoryTodo): TodoDoc {
+    const todoWithMethods = {
+      ...todo,
+      _id: todo.id,
+      toJSON: function() {
+        return {
+          id: this.id,
+          title: this.title,
+          description: this.description,
+          completed: this.completed,
+          priority: this.priority,
+          createdBy: this.createdBy || '',
+          createdAt: this.createdAt,
+          updatedAt: this.updatedAt,
+          lockedBy: this.lockedBy,
+          lockedAt: this.lockedAt
+        };
+      }
+    } as any as TodoDoc;
+    
+    return todoWithMethods;
+  }
+
+  /**
+   * Check if a todo is locked by another user
+   * @throws {TodoLockError} if todo is locked by another user
+   */
+  private checkTodoLock(todo: InMemoryTodo, userId?: string): void {
+    if (todo.isLocked && todo.lockedAt) {
+      const lockExpired = (new Date().getTime() - todo.lockedAt.getTime()) >= 5 * 60 * 1000;
+      
+      if (!lockExpired && todo.lockedBy !== userId) {
+        this.logger.warn(`Cannot modify todo ${todo.id}: locked by user ${todo.lockedBy}`);
+        throw new TodoLockError(`Todo is locked by another user`);
+      }
+    }
+  }
 
   async findAll(queryParams: TodoQueryParams = { limit: 10, page: 1 }): Promise<TodoDoc[]> {
     try {
@@ -46,7 +89,7 @@ export class InMemoryTodoRepository implements ITodoRepository {
         .slice(skip, skip + limit);
       
       this.logger.debug(`InMemoryTodoRepository: Found ${paginatedTodos.length} todos`);
-      return paginatedTodos as TodoDoc[];
+      return paginatedTodos.map(todo => this.toTodoDoc(todo));
     } catch (error) {
       this.logger.error('InMemoryTodoRepository: Error in findAll', error);
       throw error;
@@ -57,14 +100,14 @@ export class InMemoryTodoRepository implements ITodoRepository {
     try {
       this.logger.debug(`InMemoryTodoRepository: Finding todo by id: ${id}`);
       const todo = this.todos.find(t => t.id === id);
-      return (todo as TodoDoc) || null;
+      return todo ? this.toTodoDoc(todo) : null;
     } catch (error) {
       this.logger.error(`InMemoryTodoRepository: Error in findById for id ${id}`, error);
       throw error;
     }
   }
 
-  async create(todoData: CreateTodoInput): Promise<TodoDoc> {
+  async create(todoData: CreateTodoInput & { createdBy: string }): Promise<TodoDoc> {
     try {
       this.logger.debug('InMemoryTodoRepository: Creating new todo', todoData);
       
@@ -74,23 +117,26 @@ export class InMemoryTodoRepository implements ITodoRepository {
         description: todoData.description || '',
         completed: false,
         priority: todoData.priority || 'medium',
+        createdBy: todoData.createdBy,
         createdAt: new Date(),
         updatedAt: new Date(),
         isLocked: false,
+        lockedBy: null,
+        lockedAt: null,
       };
       
       this.todos.push(newTodo);
       this.nextId++;
       
       this.logger.debug(`InMemoryTodoRepository: Created todo with id: ${newTodo.id}`);
-      return newTodo as TodoDoc;
+      return this.toTodoDoc(newTodo);
     } catch (error) {
       this.logger.error('InMemoryTodoRepository: Error in create', error);
       throw error;
     }
   }
 
-  async update(id: string, updateData: UpdateTodoInput): Promise<TodoDoc | null> {
+  async update(id: string, updateData: UpdateTodoInput, userId?: string): Promise<TodoDoc | null> {
     try {
       this.logger.debug(`InMemoryTodoRepository: Updating todo with id: ${id}`, updateData);
       
@@ -98,6 +144,9 @@ export class InMemoryTodoRepository implements ITodoRepository {
       if (todoIndex === -1) {
         return null;
       }
+
+      // Check if todo is locked by another user
+      this.checkTodoLock(this.todos[todoIndex], userId);
 
       const updatedTodo: InMemoryTodo = {
         ...this.todos[todoIndex],
@@ -107,16 +156,22 @@ export class InMemoryTodoRepository implements ITodoRepository {
 
       this.todos[todoIndex] = updatedTodo;
       this.logger.debug(`InMemoryTodoRepository: Updated todo with id: ${id}`);
-      return updatedTodo as TodoDoc;
+      return this.toTodoDoc(updatedTodo);
     } catch (error) {
       this.logger.error(`InMemoryTodoRepository: Error in update for id ${id}`, error);
       throw error;
     }
   }
 
-  async delete(id: string): Promise<boolean> {
+  async delete(id: string, userId?: string): Promise<boolean> {
     try {
       this.logger.debug(`InMemoryTodoRepository: Deleting todo with id: ${id}`);
+      
+      const todo = this.todos.find(t => t.id === id);
+      if (todo) {
+        // Check if todo is locked by another user
+        this.checkTodoLock(todo, userId);
+      }
       
       const initialLength = this.todos.length;
       this.todos = this.todos.filter(t => t.id !== id);
@@ -149,7 +204,7 @@ export class InMemoryTodoRepository implements ITodoRepository {
       };
 
       this.logger.debug(`InMemoryTodoRepository: Toggled todo with id: ${id}, completed: ${this.todos[todoIndex].completed}`);
-      return this.todos[todoIndex] as TodoDoc;
+      return this.toTodoDoc(this.todos[todoIndex]);
     } catch (error) {
       this.logger.error(`InMemoryTodoRepository: Error in toggleCompletion for id ${id}`, error);
       throw error;
@@ -182,7 +237,7 @@ export class InMemoryTodoRepository implements ITodoRepository {
       };
 
       this.logger.debug(`InMemoryTodoRepository: Successfully locked todo with id: ${id}`);
-      return this.todos[todoIndex] as TodoDoc;
+      return this.toTodoDoc(this.todos[todoIndex]);
     } catch (error) {
       this.logger.error(`InMemoryTodoRepository: Error in findByIdAndLock for id ${id}`, error);
       throw error;
@@ -198,8 +253,8 @@ export class InMemoryTodoRepository implements ITodoRepository {
         this.todos[todoIndex] = {
           ...this.todos[todoIndex],
           isLocked: false,
-          lockedBy: undefined,
-          lockedAt: undefined
+          lockedBy: null,
+          lockedAt: null
         };
         this.logger.debug(`InMemoryTodoRepository: Successfully unlocked todo with id: ${id}`);
       }
@@ -239,7 +294,7 @@ export class InMemoryTodoRepository implements ITodoRepository {
         .slice(skip, skip + limit);
       
       this.logger.debug(`InMemoryTodoRepository: Found ${paginatedTodos.length} todos with completed=${completed}`);
-      return paginatedTodos as TodoDoc[];
+      return paginatedTodos.map(todo => this.toTodoDoc(todo));
     } catch (error) {
       this.logger.error(`InMemoryTodoRepository: Error in findByStatus for completed=${completed}`, error);
       throw error;
@@ -257,7 +312,7 @@ export class InMemoryTodoRepository implements ITodoRepository {
         .slice(skip, skip + limit);
       
       this.logger.debug(`InMemoryTodoRepository: Found ${paginatedTodos.length} todos with priority=${priority}`);
-      return paginatedTodos as TodoDoc[];
+      return paginatedTodos.map(todo => this.toTodoDoc(todo));
     } catch (error) {
       this.logger.error(`InMemoryTodoRepository: Error in findByPriority for priority=${priority}`, error);
       throw error;

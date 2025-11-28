@@ -2,9 +2,27 @@ import { Todo, TodoDoc } from '../models/todo.model';
 import { CreateTodoInput, UpdateTodoInput, TodoQueryParams } from '../schemas/todo.schema';
 import { ITodoRepository } from './interfaces/todo-repository.interface';
 import { Logger } from '../services/logger.service';
+import { TodoLockError } from '../errors';
 
 export class MongoTodoRepository implements ITodoRepository {
   constructor(private readonly logger: Logger) {}
+
+  /**
+   * Check if a todo is locked by another user
+   * @throws {TodoLockError} if todo is locked by another user
+   */
+  private async checkTodoLock(id: string, userId?: string): Promise<void> {
+    const existingTodo = await Todo.findById(id).exec();
+    if (existingTodo && existingTodo.isLocked) {
+      const lockExpired = existingTodo.lockedAt && 
+        existingTodo.lockedAt < new Date(Date.now() - 5 * 60 * 1000);
+      
+      if (!lockExpired && existingTodo.lockedBy !== userId) {
+        this.logger.warn(`Cannot modify todo ${id}: locked by user ${existingTodo.lockedBy}`);
+        throw new TodoLockError(`Todo is locked by another user`);
+      }
+    }
+  }
   
   async findAll(queryParams: TodoQueryParams = { limit: 10, page: 1 }): Promise<TodoDoc[]> {
     try {
@@ -59,9 +77,12 @@ export class MongoTodoRepository implements ITodoRepository {
     }
   }
 
-  async update(id: string, updateData: UpdateTodoInput): Promise<TodoDoc | null> {
+  async update(id: string, updateData: UpdateTodoInput, userId?: string): Promise<TodoDoc | null> {
     try {
       this.logger.debug(`MongoTodoRepository: Updating todo with id: ${id}`, updateData);
+      
+      // Check if todo is locked by another user
+      await this.checkTodoLock(id, userId);
       
       const updatedTodo = await Todo.findByIdAndUpdate(
         id,
@@ -80,9 +101,12 @@ export class MongoTodoRepository implements ITodoRepository {
     }
   }
 
-  async delete(id: string): Promise<boolean> {
+  async delete(id: string, userId?: string): Promise<boolean> {
     try {
       this.logger.debug(`MongoTodoRepository: Deleting todo with id: ${id}`);
+      
+      // Check if todo is locked by another user
+      await this.checkTodoLock(id, userId);
       
       const deletedTodo = await Todo.findByIdAndDelete(id).exec();
       const wasDeleted = !!deletedTodo;

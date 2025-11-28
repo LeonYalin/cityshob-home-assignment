@@ -1,4 +1,4 @@
-import { Component, signal, inject, OnInit, computed } from '@angular/core';
+import { Component, signal, inject, OnInit, OnDestroy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -21,6 +21,7 @@ import { type Todo, type CreateTodoRequest, type UpdateTodoRequest } from '@real
 
 import { ApiService } from '../services/api.service';
 import { AuthService } from '../services/auth.service';
+import { WebSocketService } from '../services/websocket.service';
 import { TodoDialogComponent } from './todo-dialog.component';
 
 @Component({
@@ -156,12 +157,20 @@ import { TodoDialogComponent } from './todo-dialog.component';
                   
                   <div class="todo-title-section">
                     <h3 [class.completed-text]="todo.completed">{{ todo.title }}</h3>
-                    <mat-chip 
-                      [class]="'priority-' + todo.priority"
-                      class="priority-chip"
-                    >
-                      {{ todo.priority | titlecase }}
-                    </mat-chip>
+                    <div class="chips-row">
+                      <mat-chip 
+                        [class]="'priority-' + todo.priority"
+                        class="priority-chip"
+                      >
+                        {{ todo.priority | titlecase }}
+                      </mat-chip>
+                      @if (todo.lockedBy) {
+                        <mat-chip class="lock-chip" matTooltip="Locked for editing">
+                          <mat-icon class="lock-icon">lock</mat-icon>
+                          Locked
+                        </mat-chip>
+                      }
+                    </div>
                   </div>
 
                   <div class="todo-actions">
@@ -371,6 +380,12 @@ import { TodoDialogComponent } from './todo-dialog.component';
       color: #999;
     }
 
+    .chips-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
     .priority-chip {
       width: fit-content;
       font-size: 0.75rem;
@@ -389,6 +404,21 @@ import { TodoDialogComponent } from './todo-dialog.component';
     .priority-chip.priority-low {
       background-color: #e8f5e8;
       color: #2e7d32;
+    }
+
+    .lock-chip {
+      background-color: #ffe082;
+      color: #f57f17;
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .lock-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
     }
 
     .todo-actions {
@@ -463,7 +493,7 @@ import { TodoDialogComponent } from './todo-dialog.component';
     }
   `]
 })
-export class TodoListComponent implements OnInit {
+export class TodoListComponent implements OnInit, OnDestroy {
   // State management with signals
   protected readonly todos = signal<Todo[]>([]);
   protected readonly isLoading = signal(false);
@@ -481,12 +511,74 @@ export class TodoListComponent implements OnInit {
   // Injected services
   private readonly apiService = inject(ApiService);
   private readonly authService = inject(AuthService);
+  private readonly webSocketService = inject(WebSocketService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly router = inject(Router);
 
   ngOnInit() {
     this.loadTodos();
+    this.setupWebSocket();
+  }
+
+  ngOnDestroy() {
+    this.webSocketService.clearCallbacks();
+    this.webSocketService.disconnect();
+  }
+
+  private setupWebSocket() {
+    // Connect to WebSocket
+    this.webSocketService.connect();
+
+    // Setup event handlers
+    this.webSocketService.onTodoCreated((event) => {
+      // Reload to get the new todo if we don't have it
+      this.apiService.getTodoById(event.todo.id).subscribe({
+        next: (todo) => {
+          this.todos.update(todos => {
+            // Avoid duplicates
+            if (todos.some(t => t.id === todo.id)) {
+              return todos;
+            }
+            return [todo, ...todos];
+          });
+        },
+        error: (err) => console.error('Failed to load new todo:', err)
+      });
+    });
+
+    this.webSocketService.onTodoUpdated((event) => {
+      this.apiService.getTodoById(event.todo.id).subscribe({
+        next: (todo) => {
+          this.todos.update(todos => 
+            todos.map(t => t.id === todo.id ? todo : t)
+          );
+        },
+        error: (err) => console.error('Failed to load updated todo:', err)
+      });
+    });
+
+    this.webSocketService.onTodoDeleted((event) => {
+      this.todos.update(todos => todos.filter(t => t.id !== event.todoId));
+    });
+
+    this.webSocketService.onTodoLocked((event) => {
+      this.todos.update(todos => 
+        todos.map(t => t.id === event.todoId 
+          ? { ...t, lockedBy: event.userId, lockedAt: event.lockedAt }
+          : t
+        )
+      );
+    });
+
+    this.webSocketService.onTodoUnlocked((event) => {
+      this.todos.update(todos => 
+        todos.map(t => t.id === event.todoId 
+          ? { ...t, lockedBy: '', lockedAt: '' }
+          : t
+        )
+      );
+    });
   }
 
   loadTodos() {

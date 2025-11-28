@@ -8,10 +8,11 @@ describe('InMemoryTodoRepository', () => {
   let mockLogger: Logger;
 
   // Helper function to create a valid CreateTodoInput with default values
-  const createValidInput = (overrides: Partial<CreateTodoInput> = {}): CreateTodoInput => ({
+  const createValidInput = (overrides: Partial<CreateTodoInput & { createdBy: string }> = {}): CreateTodoInput & { createdBy: string } => ({
     title: 'Test Todo',
     description: '',
     priority: 'medium',
+    createdBy: 'test-user-123',
     ...overrides
   });
 
@@ -86,7 +87,13 @@ describe('InMemoryTodoRepository', () => {
 
       const found = await repository.findById(created.id);
 
-      expect(found).toEqual(created);
+      expect(found).toMatchObject({
+        id: created.id,
+        title: 'Find Me',
+        completed: false,
+        priority: 'medium',
+        createdBy: 'test-user-123'
+      });
     });
 
     test('should return null for non-existent ID', async () => {

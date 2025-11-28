@@ -15,6 +15,8 @@ export interface Todo {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  lockedBy?: string;
+  lockedAt?: string;
 }
 
 /**
@@ -107,7 +109,11 @@ export interface ToggleTodoResponse {
 export interface LockTodoResponse {
   success: boolean;
   message: string;
-  data: Todo;
+  data: {
+    id: string;
+    lockedBy: string;
+    lockedAt: string;
+  };
 }
 
 /**

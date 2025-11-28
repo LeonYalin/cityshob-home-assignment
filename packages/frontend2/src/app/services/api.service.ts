@@ -12,7 +12,9 @@ import {
   type CreateTodoResponse,
   type UpdateTodoResponse,
   type DeleteTodoResponse,
-  type ToggleTodoResponse
+  type ToggleTodoResponse,
+  type LockTodoResponse,
+  type UnlockTodoResponse
 } from '@real-time-todo/common';
 
 @Injectable({
@@ -56,5 +58,15 @@ export class ApiService {
   toggleTodo(id: string): Observable<Todo> {
     return this.http.patch<ToggleTodoResponse>(`${this.baseUrl}/todos/${id}/toggle`, {})
       .pipe(map(response => response.data));
+  }
+
+  lockTodo(id: string): Observable<{ id: string; lockedBy: string; lockedAt: string }> {
+    return this.http.post<LockTodoResponse>(`${this.baseUrl}/todos/${id}/lock`, {})
+      .pipe(map(response => response.data));
+  }
+
+  unlockTodo(id: string): Observable<void> {
+    return this.http.post<UnlockTodoResponse>(`${this.baseUrl}/todos/${id}/unlock`, {})
+      .pipe(map(() => undefined));
   }
 }

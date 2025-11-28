@@ -12,8 +12,8 @@ export interface TodoDoc extends Document {
   createdAt: Date;
   updatedAt: Date;
   isLocked: boolean;
-  lockedBy?: string; // User ID who locked the todo
-  lockedAt?: Date;
+  lockedBy: string; // User ID who locked the todo (empty string if not locked)
+  lockedAt: Date | null; // Date when locked (null if not locked)
 }
 
 // Model interface for static methods
@@ -57,11 +57,11 @@ const todoSchema = new Schema<TodoDoc, TodoModel>(
     },
     lockedBy: { 
       type: String, 
-      required: false 
+      default: '' 
     },
     lockedAt: { 
       type: Date, 
-      required: false 
+      default: null 
     }
   },
   {
@@ -71,10 +71,8 @@ const todoSchema = new Schema<TodoDoc, TodoModel>(
         ret.id = ret._id;
         delete ret._id;
         delete ret.__v;
-        // Don't expose locking fields in regular API responses
+        // Don't expose internal isLocked field
         delete ret.isLocked;
-        delete ret.lockedBy;
-        delete ret.lockedAt;
       },
     },
   }
@@ -89,6 +87,8 @@ todoSchema.statics.build = function (todoData: CreateTodoInput & { createdBy: st
     createdBy: todoData.createdBy,
     completed: false,
     isLocked: false,
+    lockedBy: '',
+    lockedAt: null,
   });
 };
 
@@ -121,7 +121,8 @@ todoSchema.statics.findByIdAndLock = async function (
 todoSchema.statics.unlockTodo = async function (id: string, userId?: string): Promise<void> {
   const updateQuery: any = {
     isLocked: false,
-    $unset: { lockedBy: 1, lockedAt: 1 }
+    lockedBy: '',
+    lockedAt: null
   };
 
   // If userId is provided, only unlock if the user owns the lock or if it's expired

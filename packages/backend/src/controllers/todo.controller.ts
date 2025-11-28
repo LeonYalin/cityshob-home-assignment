@@ -33,7 +33,9 @@ export function todoDocToTodo(doc: TodoDoc): Todo {
     priority: json.priority,
     createdBy: json.createdBy,
     createdAt: json.createdAt.toISOString(),
-    updatedAt: json.updatedAt.toISOString()
+    updatedAt: json.updatedAt.toISOString(),
+    ...(doc.lockedBy && { lockedBy: doc.lockedBy }),
+    ...(doc.lockedAt && { lockedAt: doc.lockedAt.toISOString() })
   };
 }
 
@@ -123,7 +125,7 @@ export const todoController = {
       logger.info(`Updating todo with id: ${id}`);
       
       const todoService = await ServiceFactory.getTodoService();
-      const todo = await todoService.updateTodo(id, updateData);
+      const todo = await todoService.updateTodo(id, updateData, userId);
       if (!todo) {
         throw new NotFoundError(`Todo with id ${id} not found`);
       }
@@ -155,7 +157,7 @@ export const todoController = {
       logger.info(`Deleting todo with id: ${id}`);
       
       const todoService = await ServiceFactory.getTodoService();
-      const deleted = await todoService.deleteTodo(id);
+      const deleted = await todoService.deleteTodo(id, userId);
       if (!deleted) {
         throw new NotFoundError(`Todo with id ${id} not found`);
       }
@@ -237,7 +239,11 @@ export const todoController = {
       res.json({
         success: true,
         message: 'Todo locked successfully',
-        data: todoDocToTodo(lockedTodo)
+        data: {
+          id: lockedTodo._id.toString(),
+          lockedBy: userId,
+          lockedAt: lockedTodo.lockedAt?.toISOString() || new Date().toISOString()
+        }
       } satisfies LockTodoResponse);
     } catch (error) {
       logger.error(`Error locking todo with id ${req.params.id}:`, error);

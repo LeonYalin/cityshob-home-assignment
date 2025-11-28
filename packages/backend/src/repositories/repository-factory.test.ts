@@ -136,11 +136,23 @@ describe('RepositoryFactory Unit Tests', () => {
       expect(created.id).toBeDefined();
 
       const found = await repository.findById(created.id);
-      expect(found).toEqual(created);
+      expect(found).toMatchObject({
+        id: created.id,
+        title: 'Test Todo',
+        description: 'Test Description',
+        priority: 'medium',
+        createdBy: 'test-user-123',
+      });
 
       const all = await repository.findAll();
       expect(all).toHaveLength(1);
-      expect(all[0]).toEqual(created);
+      expect(all[0]).toMatchObject({
+        id: created.id,
+        title: 'Test Todo',
+        description: 'Test Description',
+        priority: 'medium',
+        createdBy: 'test-user-123',
+      });
     });
 
     it('should handle repository errors gracefully', async () => {
