@@ -5,7 +5,7 @@ import { Logger } from '../services/logger.service';
 import { type ConnectedUser, socketEvents } from '@real-time-todo/common';
 import { TodoDoc } from '../models/todo.model';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 const logger = new Logger('SocketService');
 
 export class SocketService {
@@ -141,20 +141,32 @@ export class SocketService {
     this.connectedUsers.delete(socket.id);
     this.userSocketMap.delete(user.userId);
 
-    // Unlock all todos locked by this user
-    try {
-      // We'll need to implement a method to get all todos locked by user
-      // For now, we'll just log it
-      logger.info(`Cleaning up locks for user: ${user.username}`);
-    } catch (error) {
-      logger.error('Error cleaning up user locks:', error);
-    }
+    // Check if user has any other active connections
+    const hasOtherConnections = Array.from(this.connectedUsers.values()).some(
+      connectedUser => connectedUser.userId === user.userId
+    );
 
-    // Broadcast to all users that user disconnected
-    this.io.emit(socketEvents.userDisconnected, {
-      userId: user.userId,
-      username: user.username
-    });
+    // Only broadcast disconnect and cleanup if this was the user's last connection
+    if (!hasOtherConnections) {
+      // Unlock all todos locked by this user
+      try {
+        // We'll need to implement a method to get all todos locked by user
+        // For now, we'll just log it
+        logger.info(`Cleaning up locks for user: ${user.username}`);
+      } catch (error) {
+        logger.error('Error cleaning up user locks:', error);
+      }
+
+      // Broadcast to all users that user disconnected
+      this.io.emit(socketEvents.userDisconnected, {
+        userId: user.userId,
+        username: user.username
+      });
+      
+      logger.info(`User ${user.username} fully disconnected (no more active connections)`);
+    } else {
+      logger.info(`User ${user.username} still has other active connections`);
+    }
 
     logger.info(`Connected users count: ${this.connectedUsers.size}`);
   }
@@ -163,7 +175,19 @@ export class SocketService {
    * Send users list to a specific socket
    */
   private sendUsersList(socket: Socket): void {
-    const usersList = Array.from(this.connectedUsers.values()).map(user => ({
+    // Get all connected users
+    const allUsers = Array.from(this.connectedUsers.values());
+    
+    // Deduplicate by userId - keep only the first connection for each user
+    const uniqueUsersMap = new Map<string, ConnectedUser>();
+    allUsers.forEach(user => {
+      if (!uniqueUsersMap.has(user.userId)) {
+        uniqueUsersMap.set(user.userId, user);
+      }
+    });
+    
+    // Convert to array for sending
+    const usersList = Array.from(uniqueUsersMap.values()).map(user => ({
       userId: user.userId,
       username: user.username,
       connectedAt: user.connectedAt

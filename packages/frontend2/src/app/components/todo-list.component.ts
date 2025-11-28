@@ -48,6 +48,86 @@ import { TodoDialogComponent } from './todo-dialog.component';
   ],
   template: `
     <div class="todo-container">
+      <!-- Floating Users Menu -->
+      <div class="users-menu" [class.expanded]="usersMenuExpanded()">
+        <button 
+          mat-fab 
+          color="primary" 
+          class="users-toggle"
+          (click)="toggleUsersMenu()"
+          [matBadge]="connectedUsersCount()"
+          matBadgeColor="accent"
+          matTooltip="Connected Users"
+        >
+          <mat-icon>people</mat-icon>
+        </button>
+        
+        @if (usersMenuExpanded()) {
+          <div class="users-list-container">
+            <div class="users-header">
+              <h3>Online Users ({{ connectedUsersCount() }})</h3>
+              <div class="connection-status">
+                @if (isWebSocketConnected()) {
+                  <span class="status-indicator connected" matTooltip="Connected">
+                    <mat-icon>wifi</mat-icon>
+                  </span>
+                } @else {
+                  <span class="status-indicator disconnected" matTooltip="Disconnected">
+                    <mat-icon>wifi_off</mat-icon>
+                  </span>
+                }
+                <button mat-icon-button (click)="toggleUsersMenu()">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            </div>
+            
+            <mat-divider></mat-divider>
+            
+            <div class="users-list">
+              @if (connectedUsersCount() === 0) {
+                <div class="no-users">
+                  <mat-icon>person_off</mat-icon>
+                  @if (isWebSocketConnected()) {
+                    <p>No other users online</p>
+                    <small>Just you right now</small>
+                  } @else {
+                    <p>Not connected to server</p>
+                    <button mat-raised-button color="primary" (click)="reconnectWebSocket()">
+                      <mat-icon>refresh</mat-icon>
+                      Reconnect
+                    </button>
+                  }
+                </div>
+              } @else {
+                @for (user of connectedUsers(); track user.userId) {
+                  <div 
+                    class="user-item"
+                    [class.current-user]="isCurrentUser(user.userId)"
+                  >
+                    <div class="user-avatar">
+                      <mat-icon>{{ isCurrentUser(user.userId) ? 'person' : 'account_circle' }}</mat-icon>
+                    </div>
+                    <div class="user-info">
+                      <span class="user-name">
+                        {{ user.username }}
+                        @if (isCurrentUser(user.userId)) {
+                          <span class="you-badge">(You)</span>
+                        }
+                      </span>
+                      <span class="user-status">
+                        <span class="online-dot"></span>
+                        Online
+                      </span>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+          </div>
+        }
+      </div>
+
       <!-- Header with Actions -->
       <mat-toolbar color="primary" class="toolbar">
         <span class="title">📝 Todo Manager</span>
@@ -143,6 +223,7 @@ import { TodoDialogComponent } from './todo-dialog.component';
             <mat-card 
               class="todo-card"
               [class.completed]="todo.completed"
+              [class.locked]="!!todo.lockedBy && !isCurrentUser(todo.lockedBy)"
               [class.high-priority]="todo.priority === 'high'"
               [class.medium-priority]="todo.priority === 'medium'"
               [class.low-priority]="todo.priority === 'low'"
@@ -164,10 +245,10 @@ import { TodoDialogComponent } from './todo-dialog.component';
                       >
                         {{ todo.priority | titlecase }}
                       </mat-chip>
-                      @if (todo.lockedBy) {
-                        <mat-chip class="lock-chip" matTooltip="Locked for editing">
+                      @if (todo.lockedBy && !isCurrentUser(todo.lockedBy)) {
+                        <mat-chip class="lock-chip" matTooltip="Locked by {{ getUsernameById(todo.lockedBy) }}">
                           <mat-icon class="lock-icon">lock</mat-icon>
-                          Locked
+                          Locked by {{ getUsernameById(todo.lockedBy) }}
                         </mat-chip>
                       }
                     </div>
@@ -178,8 +259,8 @@ import { TodoDialogComponent } from './todo-dialog.component';
                       mat-icon-button
                       color="primary"
                       (click)="editTodo(todo)"
-                      [disabled]="todo.completed"
-                      matTooltip="Edit Todo"
+                      [disabled]="todo.completed || (todo.lockedBy && !isCurrentUser(todo.lockedBy))"
+                      [matTooltip]="getTodoEditTooltip(todo)"
                     >
                       <mat-icon>edit</mat-icon>
                     </button>
@@ -241,6 +322,203 @@ import { TodoDialogComponent } from './todo-dialog.component';
       max-width: 1200px;
       margin: 0 auto;
       padding: 20px;
+    }
+
+    /* Floating Users Menu */
+    .users-menu {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 12px;
+    }
+
+    .users-toggle {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s ease;
+    }
+
+    .users-toggle:hover {
+      transform: scale(1.05);
+    }
+
+    .users-list-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      width: 320px;
+      max-height: 500px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: slideInUp 0.3s ease-out;
+    }
+
+    @keyframes slideInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .users-header {
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .users-header h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+
+    .connection-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+
+    .status-indicator mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+
+    .status-indicator.connected {
+      color: #4caf50;
+    }
+
+    .status-indicator.disconnected {
+      color: #f44336;
+    }
+
+    .users-list {
+      overflow-y: auto;
+      max-height: 400px;
+      padding: 8px;
+    }
+
+    .no-users {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      color: #999;
+      gap: 12px;
+    }
+
+    .no-users mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+    }
+
+    .user-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 4px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .user-item:hover {
+      background-color: #f5f5f5;
+    }
+
+    .user-item.current-user {
+      background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+      border: 2px solid #2196f3;
+    }
+
+    .user-item.current-user:hover {
+      background: linear-gradient(135deg, #bbdefb 0%, #90caf9 100%);
+    }
+
+    .user-avatar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .user-item.current-user .user-avatar {
+      background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+    }
+
+    .user-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .user-name {
+      font-weight: 500;
+      font-size: 0.95rem;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .you-badge {
+      display: inline-block;
+      background: #2196f3;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+
+    .user-status {
+      font-size: 0.8rem;
+      color: #666;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .online-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #4caf50;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
     }
 
     .toolbar {
@@ -343,6 +621,23 @@ import { TodoDialogComponent } from './todo-dialog.component';
       background-color: #f5f5f5;
     }
 
+    .todo-card.locked {
+      border: 2px solid #ffa726;
+      background: linear-gradient(135deg, #fff9e6 0%, #ffe8cc 100%);
+      box-shadow: 0 4px 12px rgba(255, 167, 38, 0.3);
+      position: relative;
+    }
+
+    .todo-card.locked::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #ffa726 0%, #ff9800 100%);
+    }
+
     .todo-card.high-priority {
       border-left: 4px solid #f44336;
     }
@@ -407,12 +702,14 @@ import { TodoDialogComponent } from './todo-dialog.component';
     }
 
     .lock-chip {
-      background-color: #ffe082;
-      color: #f57f17;
+      background: linear-gradient(135deg, #ffa726 0%, #ff9800 100%);
+      color: white;
       font-size: 0.75rem;
+      font-weight: 600;
       display: flex;
       align-items: center;
       gap: 4px;
+      box-shadow: 0 2px 4px rgba(255, 167, 38, 0.3);
     }
 
     .lock-icon {
@@ -471,6 +768,16 @@ import { TodoDialogComponent } from './todo-dialog.component';
         padding: 10px;
       }
 
+      .users-menu {
+        bottom: 16px;
+        right: 16px;
+      }
+
+      .users-list-container {
+        width: calc(100vw - 32px);
+        max-width: 320px;
+      }
+
       .stats-row {
         grid-template-columns: 1fr;
         gap: 12px;
@@ -498,6 +805,15 @@ export class TodoListComponent implements OnInit, OnDestroy {
   protected readonly todos = signal<Todo[]>([]);
   protected readonly isLoading = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly usersMenuExpanded = signal(false);
+
+  // Connected users from WebSocket
+  protected readonly connectedUsers = computed(() => this.webSocketService.connectedUsers());
+  protected readonly connectedUsersCount = computed(() => this.connectedUsers().length);
+  protected readonly isWebSocketConnected = computed(() => this.webSocketService.isConnected());
+
+  // Current user ID for comparison
+  protected readonly currentUserId = computed(() => this.authService.currentUser()?.id || '');
 
   // Computed values
   protected readonly totalTodos = computed(() => this.todos().length);
@@ -574,7 +890,7 @@ export class TodoListComponent implements OnInit, OnDestroy {
     this.webSocketService.onTodoUnlocked((event) => {
       this.todos.update(todos => 
         todos.map(t => t.id === event.todoId 
-          ? { ...t, lockedBy: '', lockedAt: '' }
+          ? { ...t, lockedBy: undefined, lockedAt: undefined }
           : t
         )
       );
@@ -628,17 +944,48 @@ export class TodoListComponent implements OnInit, OnDestroy {
   }
 
   editTodo(todo: Todo) {
-    const dialogRef = this.dialog.open(TodoDialogComponent, {
-      width: '500px',
-      maxWidth: '90vw',
-      position: { top: '10vh' },
-      disableClose: false,
-      data: { mode: 'edit', todo }
-    });
+    // Check if todo is locked by someone else
+    if (todo.lockedBy && !this.isCurrentUser(todo.lockedBy)) {
+      const lockedByUsername = this.getUsernameById(todo.lockedBy);
+      this.showSnackBar(`This todo is currently being edited by ${lockedByUsername}`, 'warning');
+      return;
+    }
 
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.updateTodo(todo.id, result);
+    // Lock the todo before opening dialog
+    this.apiService.lockTodo(todo.id).subscribe({
+      next: (lockResponse) => {
+        // Open dialog after successfully locking
+        const dialogRef = this.dialog.open(TodoDialogComponent, {
+          width: '500px',
+          maxWidth: '90vw',
+          position: { top: '10vh' },
+          disableClose: false,
+          data: { mode: 'edit', todo }
+        });
+
+        dialogRef.afterClosed().subscribe(result => {
+          // Always unlock when dialog closes (whether saved or cancelled)
+          this.apiService.unlockTodo(todo.id).subscribe({
+            next: () => {
+              if (result) {
+                this.updateTodo(todo.id, result);
+              }
+            },
+            error: (err) => {
+              console.error('Failed to unlock todo:', err);
+              // Still update if user saved changes
+              if (result) {
+                this.updateTodo(todo.id, result);
+              }
+            }
+          });
+        });
+      },
+      error: (err) => {
+        // Show error if locking failed (e.g., already locked)
+        const errorMsg = err.error?.message || 'Failed to lock todo';
+        this.showSnackBar(errorMsg, 'error');
+        console.error('Lock todo error:', err);
       }
     });
   }
@@ -688,6 +1035,38 @@ export class TodoListComponent implements OnInit, OnDestroy {
     });
   }
 
+  toggleUsersMenu() {
+    this.usersMenuExpanded.update(v => !v);
+  }
+
+  isCurrentUser(userId: string): boolean {
+    return userId === this.currentUserId();
+  }
+
+  getUsernameById(userId: string): string {
+    const user = this.connectedUsers().find(u => u.userId === userId);
+    return user?.username || 'Unknown User';
+  }
+
+  getTodoEditTooltip(todo: Todo): string {
+    if (todo.completed) {
+      return 'Cannot edit completed todo';
+    }
+    if (todo.lockedBy && !this.isCurrentUser(todo.lockedBy)) {
+      const lockedByUsername = this.getUsernameById(todo.lockedBy);
+      return `Locked by ${lockedByUsername}`;
+    }
+    return 'Edit Todo';
+  }
+
+  reconnectWebSocket() {
+    console.log('Manually reconnecting WebSocket...');
+    this.webSocketService.disconnect();
+    setTimeout(() => {
+      this.webSocketService.connect();
+    }, 500);
+  }
+
   logout() {
     this.authService.logout().subscribe({
       next: () => {
@@ -701,10 +1080,22 @@ export class TodoListComponent implements OnInit, OnDestroy {
     });
   }
 
-  private showSnackBar(message: string, type: 'success' | 'error') {
+  private showSnackBar(message: string, type: 'success' | 'error' | 'warning') {
+    let panelClass: string;
+    switch (type) {
+      case 'success':
+        panelClass = 'success-snackbar';
+        break;
+      case 'warning':
+        panelClass = 'warning-snackbar';
+        break;
+      default:
+        panelClass = 'error-snackbar';
+    }
+    
     this.snackBar.open(message, 'Close', {
       duration: 3000,
-      panelClass: type === 'success' ? 'success-snackbar' : 'error-snackbar'
+      panelClass: panelClass
     });
   }
 }

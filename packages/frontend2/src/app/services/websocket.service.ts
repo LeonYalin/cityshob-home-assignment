@@ -37,17 +37,13 @@ export class WebSocketService {
       return;
     }
 
-    // Get auth token from cookie
-    const token = this.getAuthToken();
-    if (!token) {
-      console.warn('No auth token found, skipping WebSocket connection');
-      return;
-    }
-
+    console.log('Connecting to WebSocket...');
     this.socket = io('http://localhost:4000', {
-      auth: { token },
       transports: ['websocket', 'polling'],
-      withCredentials: true
+      withCredentials: true,
+      extraHeaders: {
+        // Cookies will be sent automatically with withCredentials: true
+      }
     });
 
     this.setupEventListeners();
