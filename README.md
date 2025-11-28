@@ -17,7 +17,7 @@ real-time-todo-app/
 ├── packages/
     ├── backend/           # Node.js API server
     ├── common/            # Shared types and constants
-    └── frontend2/         # Angular 18 application
+    └── frontend/          # Angular 18 application
 ```
 
 ## Getting Started

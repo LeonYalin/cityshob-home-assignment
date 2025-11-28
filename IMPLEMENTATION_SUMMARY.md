@@ -215,7 +215,7 @@ We have successfully implemented Node.js testing best practices across the entir
 - ✅ **Complete code deduplication across codebase**
 
 #### **Frontend Foundation - COMPLETED**
-- ✅ Angular 18 with standalone components and zoneless change detection (frontend2)
+- ✅ Angular 18 with standalone components and zoneless change detection
 - ✅ HttpClient configuration with fetch API and credential support
 - ✅ Reactive UI with Angular signals
 - ✅ Modern responsive styling and error handling
@@ -267,7 +267,7 @@ cd packages/backend && npm run dev
 # 🚀 Server running on http://localhost:4000
 
 # Start frontend (Terminal 2)  
-cd packages/frontend2 && npm start
+cd packages/frontend && npm start
 # 🅰️ Angular dev server on http://localhost:4200
 
 # Run tests
@@ -536,7 +536,7 @@ real-time-todo-app/
     │   │   └── server.ts        # Express server
     │   ├── dist/               # Production build
     │   └── package.json        # Backend dependencies
-    └── frontend2/              # Angular application
+    └── frontend/               # Angular application
         ├── src/app/
         │   ├── services/       # ✅ API & WebSocket services (use common types)
         │   ├── components/     # ✅ Login, Register, Todo components
