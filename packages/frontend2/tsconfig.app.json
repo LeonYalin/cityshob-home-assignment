@@ -4,10 +4,15 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/app",
-    "types": []
+    "types": [],
+    "paths": {
+      "@real-time-todo/common": ["../common/src/index.ts"],
+      "@real-time-todo/common/*": ["../common/src/*"]
+    }
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "../common/src/**/*.ts"
   ],
   "exclude": [
     "src/**/*.spec.ts"
