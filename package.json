@@ -10,7 +10,8 @@
     "start:dev": "concurrently \"npm:dev:*\"",
     "dev:frontend": "npm --workspace packages/frontend start",
     "dev:backend": "npm --workspace packages/backend run dev",
-    "build": "npm run build --workspaces",
+    "build:deploy": "./build-deploy.sh",
+    "serve": "cd dist && NODE_ENV=production node server.js",
     "test": "npm run test --workspaces",
     "lint": "npm run lint --workspaces",
     "clean": "npm run clean --workspaces"

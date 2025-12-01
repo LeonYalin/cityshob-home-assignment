@@ -1,7 +1,7 @@
 {
   "name": "@real-time-todo/common",
   "version": "1.0.0",
-  "description": "Shared types and constants for real-time todo application",
+  "description": "Shared types and constants for real-time todo application (type-only package)",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "keywords": ["todo", "shared", "types"],

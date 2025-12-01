@@ -2,7 +2,7 @@ import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZonelessC
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { authInterceptor } from './interceptors/auth.interceptor';
-import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { AuthService } from './services/auth.service';
 import { WebSocketService } from './services/websocket.service';
 
@@ -29,7 +29,7 @@ export const appConfig: ApplicationConfig = {
       withFetch(),
       withInterceptors([authInterceptor])
     ),
-    provideAnimationsAsync(),
+    provideNoopAnimations(),
     {
       provide: APP_INITIALIZER,
       useFactory: initializeWebSocketFactory,

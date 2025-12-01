@@ -52,7 +52,7 @@ app.use('/api', apiRoutes);
 
 // Serve Angular frontend in production
 if (NODE_ENV === 'production') {
-  const frontendPath = path.join(__dirname, '../../frontend/dist');
+  const frontendPath = path.join(__dirname, 'frontend');
   
   // Serve static files
   app.use(express.static(frontendPath));
