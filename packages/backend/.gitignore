@@ -5,6 +5,7 @@ build/
 *.js.map
 *.d.ts
 !jest.config.js
+!esbuild.config.js
 
 # Dependencies
 node_modules/
