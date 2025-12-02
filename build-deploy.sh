@@ -10,6 +10,13 @@ echo "🧹 Cleaning dist folder..."
 rm -rf dist
 mkdir -p dist
 
+# Build common package first
+echo "📦 Building common package..."
+cd packages/common
+npm install
+npm run build
+cd ../..
+
 # Build backend
 echo "📦 Building backend..."
 cd packages/backend
