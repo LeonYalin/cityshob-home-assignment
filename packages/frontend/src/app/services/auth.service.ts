@@ -16,7 +16,7 @@ import {
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly API_URL = 'http://localhost:4000/api/auth';
+  private readonly API_URL = `${window.location.origin}/api/auth`;
   private readonly http = inject(HttpClient);
 
   // Reactive state management
