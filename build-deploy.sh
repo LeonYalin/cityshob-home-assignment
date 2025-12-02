@@ -13,12 +13,14 @@ mkdir -p dist
 # Build backend
 echo "📦 Building backend..."
 cd packages/backend
+npm install
 npm run build
 cd ../..
 
 # Build frontend
 echo "🅰️ Building frontend..."
 cd packages/frontend
+npm install
 npm run build
 cd ../..
 
