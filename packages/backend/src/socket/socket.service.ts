@@ -4,8 +4,9 @@ import jwt from 'jsonwebtoken';
 import { Logger } from '../services/logger.service';
 import { type ConnectedUser, socketEvents } from '@real-time-todo/common';
 import { TodoDoc } from '../models/todo.model';
+import { RepositoryFactory } from '../repositories/repository.factory';
+import { config } from '../config/env.config';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 const logger = new Logger('SocketService');
 
 export class SocketService {
@@ -44,7 +45,7 @@ export class SocketService {
         }
 
         // Verify JWT token
-        const decoded = jwt.verify(token, JWT_SECRET) as ConnectedUser;
+        const decoded = jwt.verify(token, config.jwtSecret) as ConnectedUser;
         
         // Attach user info to socket
         (socket as any).user = {
@@ -137,9 +138,10 @@ export class SocketService {
   private async handleUserDisconnected(socket: Socket, user: ConnectedUser): Promise<void> {
     logger.info(`User disconnected: ${user.username} (${socket.id})`);
 
-    // Remove user from connected users
-    this.connectedUsers.delete(socket.id);
-    this.userSocketMap.delete(user.userId);
+    try {
+      // Remove user from connected users
+      this.connectedUsers.delete(socket.id);
+      this.userSocketMap.delete(user.userId);
 
     // Check if user has any other active connections
     const hasOtherConnections = Array.from(this.connectedUsers.values()).some(
@@ -150,9 +152,22 @@ export class SocketService {
     if (!hasOtherConnections) {
       // Unlock all todos locked by this user
       try {
-        // We'll need to implement a method to get all todos locked by user
-        // For now, we'll just log it
         logger.info(`Cleaning up locks for user: ${user.username}`);
+        const todoRepository = await RepositoryFactory.getTodoRepository();
+        
+        // Find all todos locked by this user
+        const allTodos = await todoRepository.findAll({ limit: 1000, page: 1 }, user.userId);
+        const lockedByUser = allTodos.filter(todo => todo.lockedBy === user.userId);
+        
+        // Unlock each todo
+        for (const todo of lockedByUser) {
+          try {
+            await todoRepository.unlock(todo.id);
+            logger.info(`Unlocked todo ${todo.id} for disconnected user ${user.username}`);
+          } catch (unlockError) {
+            logger.error(`Failed to unlock todo ${todo.id}:`, unlockError);
+          }
+        }
       } catch (error) {
         logger.error('Error cleaning up user locks:', error);
       }
@@ -169,6 +184,11 @@ export class SocketService {
     }
 
     logger.info(`Connected users count: ${this.connectedUsers.size}`);
+    } finally {
+      // Always ensure maps are cleaned up, even if errors occurred
+      this.connectedUsers.delete(socket.id);
+      this.userSocketMap.delete(user.userId);
+    }
   }
 
   /**

@@ -111,9 +111,9 @@ describe('TodoController', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data).toHaveLength(2);
-      expect(response.body.data[0].id).toBe('1');
-      expect(response.body.data[1].id).toBe('2');
+      expect(response.body.data.data).toHaveLength(2);
+      expect(response.body.data.data[0].id).toBe('1');
+      expect(response.body.data.data[1].id).toBe('2');
       expect(mockTodoService.getAllTodos).toHaveBeenCalledWith({
         completed: 'true',
         priority: 'high',

@@ -1,6 +1,6 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, BehaviorSubject, of } from 'rxjs';
+import { BehaviorSubject, Observable, of } from 'rxjs';
 import { map, catchError, tap } from 'rxjs/operators';
 import { 
   type User, 
@@ -11,32 +11,28 @@ import {
   type LogoutResponse, 
   type GetCurrentUserResponse 
 } from '@real-time-todo/common';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly API_URL = `${window.location.origin}/api/auth`;
-  private readonly http = inject(HttpClient);
+  private readonly API_URL = `${environment.apiUrl}/auth`;
 
-  // Reactive state management
-  private readonly currentUserSubject = new BehaviorSubject<User | null>(null);
-  private readonly isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
-  private readonly isAuthInitializedSubject = new BehaviorSubject<boolean>(false);
+  // BehaviorSubjects for reactive programming
+  private currentUserSubject = new BehaviorSubject<User | null>(null);
+  public currentUser$ = this.currentUserSubject.asObservable();
   
-  // Angular signals for modern reactive programming
-  public readonly currentUser = signal<User | null>(null);
-  public readonly isAuthenticated = signal<boolean>(false);
+  private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
+  public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
   
-  // Observables for compatibility
-  public readonly currentUser$ = this.currentUserSubject.asObservable();
-  public readonly isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
-  public readonly isAuthInitialized$ = this.isAuthInitializedSubject.asObservable();
+  private isAuthInitializedSubject = new BehaviorSubject<boolean>(false);
+  public isAuthInitialized$ = this.isAuthInitializedSubject.asObservable();
 
   // WebSocket service - lazy loaded to avoid circular dependency
   private wsService: { connect: () => void; disconnect: () => void } | null = null;
 
-  constructor() {
+  constructor(private http: HttpClient) {
     this.initializeAuthState();
   }
 
@@ -54,7 +50,7 @@ export class AuthService {
     return this.http.post<LoginResponse>(`${this.API_URL}/login`, loginData)
       .pipe(
         tap(response => {
-          if (response.success && response.data) {
+          if (response.success && response.data?.user) {
             this.setAuthData(response.data.user);
           }
         }),
@@ -99,7 +95,7 @@ export class AuthService {
     return this.http.get<GetCurrentUserResponse>(`${this.API_URL}/me`)
       .pipe(
         tap(response => {
-          if (response.success && response.data.user) {
+          if (response.success && response.data?.user) {
             this.updateUser(response.data.user);
           }
         }),
@@ -112,7 +108,14 @@ export class AuthService {
    * With cookie-based auth, we check the reactive state
    */
   isLoggedIn(): boolean {
-    return this.isAuthenticated();
+    return this.isAuthenticatedSubject.value;
+  }
+  
+  /**
+   * Get current user value
+   */
+  getCurrentUserValue(): User | null {
+    return this.currentUserSubject.value;
   }
 
   /**
@@ -139,7 +142,6 @@ export class AuthService {
    * Update user data without changing authentication state
    */
   private updateUser(user: User): void {
-    this.currentUser.set(user);
     this.currentUserSubject.next(user);
   }
 
@@ -147,8 +149,6 @@ export class AuthService {
    * Update authentication state
    */
   private updateAuthState(user: User | null, authenticated: boolean): void {
-    this.currentUser.set(user);
-    this.isAuthenticated.set(authenticated);
     this.currentUserSubject.next(user);
     this.isAuthenticatedSubject.next(authenticated);
   }
@@ -176,18 +176,18 @@ export class AuthService {
     // If cookie exists and is valid, we'll get user data back
     this.http.get<GetCurrentUserResponse>(`${this.API_URL}/me`).pipe(
       tap(response => {
-        if (response.success && response.data.user) {
+        if (response.success && response.data?.user) {
           this.updateUser(response.data.user);
         }
       }),
       catchError(() => {
         // On error during initialization, just return empty - don't call forceLogout
         // This is expected when user is not authenticated
-        return of(null as any);
+        return of(null);
       })
     ).subscribe({
       next: (response) => {
-        if (response && response.success && response.data.user) {
+        if (response && response.success && response.data?.user) {
           // User is authenticated, set state
           this.updateAuthState(response.data.user, true);
           

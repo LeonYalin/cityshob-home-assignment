@@ -3,6 +3,7 @@ import { CreateTodoInput, UpdateTodoInput, TodoQueryParams } from '../schemas/to
 import { ITodoRepository } from './interfaces/todo-repository.interface';
 import { Logger } from '../services/logger.service';
 import { TodoLockError } from '../errors';
+import { LOCK_TIMEOUT_MS } from '../constants/timeouts';
 
 export class MongoTodoRepository implements ITodoRepository {
   constructor(private readonly logger: Logger) {}
@@ -15,7 +16,7 @@ export class MongoTodoRepository implements ITodoRepository {
     const existingTodo = await Todo.findById(id).exec();
     if (existingTodo && existingTodo.isLocked) {
       const lockExpired = existingTodo.lockedAt && 
-        existingTodo.lockedAt < new Date(Date.now() - 5 * 60 * 1000);
+        existingTodo.lockedAt < new Date(Date.now() - LOCK_TIMEOUT_MS);
       
       if (!lockExpired && existingTodo.lockedBy !== userId) {
         this.logger.warn(`Cannot modify todo ${id}: locked by user ${existingTodo.lockedBy}`);
@@ -188,10 +189,10 @@ export class MongoTodoRepository implements ITodoRepository {
         return false;
       }
       
-      // Check if locked and not expired (5 minute timeout)
+      // Check if locked and not expired
       const isLocked = !!(todo.isLocked && 
         todo.lockedAt && 
-        (new Date().getTime() - todo.lockedAt.getTime()) < 5 * 60 * 1000);
+        (new Date().getTime() - todo.lockedAt.getTime()) < LOCK_TIMEOUT_MS);
       
       return isLocked;
     } catch (error) {

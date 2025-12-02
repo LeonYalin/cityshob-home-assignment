@@ -1,4 +1,4 @@
-import { Component, signal, inject, OnInit, OnDestroy, computed } from '@angular/core';
+import { Component, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -17,7 +17,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { type Todo, type CreateTodoRequest, type UpdateTodoRequest } from '@real-time-todo/common';
+import { type Todo, type CreateTodoRequest, type UpdateTodoRequest, type ConnectedUser } from '@real-time-todo/common';
 
 import { ApiService } from '../services/api.service';
 import { AuthService } from '../services/auth.service';
@@ -55,7 +55,7 @@ import { TodoDialogComponent } from './todo-dialog.component';
           color="primary" 
           class="users-toggle"
           (click)="toggleUsersMenu()"
-          [matBadge]="connectedUsersCount()"
+          [matBadge]="connectedUsersCount"
           matBadgeColor="accent"
           matTooltip="Connected Users"
         >
@@ -65,9 +65,9 @@ import { TodoDialogComponent } from './todo-dialog.component';
         @if (usersMenuExpanded()) {
           <div class="users-list-container">
             <div class="users-header">
-              <h3>Online Users ({{ connectedUsersCount() }})</h3>
+              <h3>Online Users ({{ connectedUsersCount }})</h3>
               <div class="connection-status">
-                @if (isWebSocketConnected()) {
+                @if (isWebSocketConnected) {
                   <span class="status-indicator connected" matTooltip="Connected">
                     <mat-icon>wifi</mat-icon>
                   </span>
@@ -85,10 +85,10 @@ import { TodoDialogComponent } from './todo-dialog.component';
             <mat-divider></mat-divider>
             
             <div class="users-list">
-              @if (connectedUsersCount() === 0) {
+              @if (connectedUsersCount === 0) {
                 <div class="no-users">
                   <mat-icon>person_off</mat-icon>
-                  @if (isWebSocketConnected()) {
+                  @if (isWebSocketConnected) {
                     <p>No other users online</p>
                     <small>Just you right now</small>
                   } @else {
@@ -100,7 +100,7 @@ import { TodoDialogComponent } from './todo-dialog.component';
                   }
                 </div>
               } @else {
-                @for (user of connectedUsers(); track user.userId) {
+                @for (user of connectedUsers; track user.userId) {
                   <div 
                     class="user-item"
                     [class.current-user]="isCurrentUser(user.userId)"
@@ -158,7 +158,7 @@ import { TodoDialogComponent } from './todo-dialog.component';
             <div class="stat-content">
               <mat-icon color="primary">checklist</mat-icon>
               <div class="stat-numbers">
-                <span class="stat-value">{{ totalTodos() }}</span>
+                <span class="stat-value">{{ totalTodos }}</span>
                 <span class="stat-label">Total</span>
               </div>
             </div>
@@ -170,7 +170,7 @@ import { TodoDialogComponent } from './todo-dialog.component';
             <div class="stat-content">
               <mat-icon color="accent">pending_actions</mat-icon>
               <div class="stat-numbers">
-                <span class="stat-value">{{ pendingTodos() }}</span>
+                <span class="stat-value">{{ pendingTodos }}</span>
                 <span class="stat-label">Pending</span>
               </div>
             </div>
@@ -182,7 +182,7 @@ import { TodoDialogComponent } from './todo-dialog.component';
             <div class="stat-content">
               <mat-icon color="primary">task_alt</mat-icon>
               <div class="stat-numbers">
-                <span class="stat-value">{{ completedTodos() }}</span>
+                <span class="stat-value">{{ completedTodos }}</span>
                 <span class="stat-label">Completed</span>
               </div>
             </div>
@@ -808,21 +808,35 @@ export class TodoListComponent implements OnInit, OnDestroy {
   protected readonly usersMenuExpanded = signal(false);
 
   // Connected users from WebSocket
-  protected readonly connectedUsers = computed(() => this.webSocketService.connectedUsers());
-  protected readonly connectedUsersCount = computed(() => this.connectedUsers().length);
-  protected readonly isWebSocketConnected = computed(() => this.webSocketService.isConnected());
+  protected get connectedUsers(): ConnectedUser[] {
+    return this.webSocketService.connectedUsers();
+  }
+  
+  protected get connectedUsersCount(): number {
+    return this.connectedUsers.length;
+  }
+  
+  protected get isWebSocketConnected(): boolean {
+    return this.webSocketService.isConnected();
+  }
 
   // Current user ID for comparison
-  protected readonly currentUserId = computed(() => this.authService.currentUser()?.id || '');
+  protected get currentUserId(): string {
+    return this.authService.getCurrentUserValue()?.id || '';
+  }
 
   // Computed values
-  protected readonly totalTodos = computed(() => this.todos().length);
-  protected readonly completedTodos = computed(() => 
-    this.todos().filter(todo => todo.completed).length
-  );
-  protected readonly pendingTodos = computed(() => 
-    this.todos().filter(todo => !todo.completed).length
-  );
+  protected get totalTodos(): number {
+    return this.todos().length;
+  }
+  
+  protected get completedTodos(): number {
+    return this.todos().filter(todo => todo.completed).length;
+  }
+  
+  protected get pendingTodos(): number {
+    return this.todos().filter(todo => !todo.completed).length;
+  }
 
   // Injected services
   private readonly apiService = inject(ApiService);
@@ -832,12 +846,17 @@ export class TodoListComponent implements OnInit, OnDestroy {
   private readonly snackBar = inject(MatSnackBar);
   private readonly router = inject(Router);
 
+  // WebSocket cleanup functions
+  private wsCleanupFunctions: Array<() => void> = [];
+
   ngOnInit() {
     this.loadTodos();
     this.setupWebSocket();
   }
 
   ngOnDestroy() {
+    // Cleanup WebSocket callbacks
+    this.wsCleanupFunctions.forEach(cleanup => cleanup());
     this.webSocketService.clearCallbacks();
     this.webSocketService.disconnect();
   }
@@ -846,72 +865,88 @@ export class TodoListComponent implements OnInit, OnDestroy {
     // Connect to WebSocket
     this.webSocketService.connect();
 
-    // Setup event handlers
-    this.webSocketService.onTodoCreated((event) => {
-      // Reload to get the new todo if we don't have it
-      this.apiService.getTodoById(event.todo.id).subscribe({
-        next: (todo) => {
-          this.todos.update(todos => {
-            // Avoid duplicates
-            if (todos.some(t => t.id === todo.id)) {
-              return todos;
-            }
-            return [todo, ...todos];
+    // Setup event handlers with cleanup
+    this.wsCleanupFunctions.push(
+      this.webSocketService.onTodoCreated((event) => {
+        // Reload to get the new todo if we don't have it
+        this.apiService.getTodoById(event.todo.id)
+          
+          .subscribe({
+            next: (todo: Todo) => {
+              this.todos.update(todos => {
+                // Avoid duplicates
+                if (todos.some(t => t.id === todo.id)) {
+                  return todos;
+                }
+                return [todo, ...todos];
+              });
+            },
+            error: (err) => console.error('Failed to load new todo:', err)
           });
-        },
-        error: (err) => console.error('Failed to load new todo:', err)
-      });
-    });
+      })
+    );
 
-    this.webSocketService.onTodoUpdated((event) => {
-      this.apiService.getTodoById(event.todo.id).subscribe({
-        next: (todo) => {
-          this.todos.update(todos => 
-            todos.map(t => t.id === todo.id ? todo : t)
-          );
-        },
-        error: (err) => console.error('Failed to load updated todo:', err)
-      });
-    });
+    this.wsCleanupFunctions.push(
+      this.webSocketService.onTodoUpdated((event) => {
+        this.apiService.getTodoById(event.todo.id)
+          
+          .subscribe({
+            next: (todo: Todo) => {
+              this.todos.update(todos => 
+                todos.map(t => t.id === todo.id ? todo : t)
+              );
+            },
+            error: (err) => console.error('Failed to load updated todo:', err)
+          });
+      })
+    );
 
-    this.webSocketService.onTodoDeleted((event) => {
-      this.todos.update(todos => todos.filter(t => t.id !== event.todoId));
-    });
+    this.wsCleanupFunctions.push(
+      this.webSocketService.onTodoDeleted((event) => {
+        this.todos.update(todos => todos.filter(t => t.id !== event.todoId));
+      })
+    );
 
-    this.webSocketService.onTodoLocked((event) => {
-      this.todos.update(todos => 
-        todos.map(t => t.id === event.todoId 
-          ? { ...t, lockedBy: event.userId, lockedAt: event.lockedAt }
-          : t
-        )
-      );
-    });
+    this.wsCleanupFunctions.push(
+      this.webSocketService.onTodoLocked((event) => {
+        this.todos.update(todos => 
+          todos.map(t => t.id === event.todoId 
+            ? { ...t, lockedBy: event.userId, lockedAt: event.lockedAt }
+            : t
+          )
+        );
+      })
+    );
 
-    this.webSocketService.onTodoUnlocked((event) => {
-      this.todos.update(todos => 
-        todos.map(t => t.id === event.todoId 
-          ? { ...t, lockedBy: undefined, lockedAt: undefined }
-          : t
-        )
-      );
-    });
+    this.wsCleanupFunctions.push(
+      this.webSocketService.onTodoUnlocked((event) => {
+        this.todos.update(todos => 
+          todos.map(t => t.id === event.todoId 
+            ? { ...t, lockedBy: undefined, lockedAt: undefined }
+            : t
+          )
+        );
+      })
+    );
   }
 
   loadTodos() {
     this.isLoading.set(true);
     this.error.set(null);
 
-    this.apiService.getAllTodos().subscribe({
-      next: (todos) => {
-        this.todos.set(todos);
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        this.error.set(err.message || 'Failed to load todos');
-        this.isLoading.set(false);
-        this.showSnackBar('Failed to load todos', 'error');
-      }
-    });
+    this.apiService.getAllTodos()
+      
+      .subscribe({
+        next: (todos: Todo[]) => {
+          this.todos.set(todos);
+          this.isLoading.set(false);
+        },
+        error: (err) => {
+          this.error.set(err.message || 'Failed to load todos');
+          this.isLoading.set(false);
+          this.showSnackBar('Failed to load todos', 'error');
+        }
+      });
   }
 
   openCreateDialog() {
@@ -931,16 +966,18 @@ export class TodoListComponent implements OnInit, OnDestroy {
   }
 
   createTodo(todoData: CreateTodoRequest) {
-    this.apiService.createTodo(todoData).subscribe({
-      next: (newTodo) => {
-        this.todos.update(todos => [newTodo, ...todos]);
-        this.showSnackBar('Todo created successfully', 'success');
-      },
-      error: (err) => {
-        this.showSnackBar('Failed to create todo', 'error');
-        console.error('Create todo error:', err);
-      }
-    });
+    this.apiService.createTodo(todoData)
+      
+      .subscribe({
+        next: (newTodo: Todo) => {
+          this.todos.update(todos => [newTodo, ...todos]);
+          this.showSnackBar('Todo created successfully', 'success');
+        },
+        error: (err) => {
+          this.showSnackBar('Failed to create todo', 'error');
+          console.error('Create todo error:', err);
+        }
+      });
   }
 
   editTodo(todo: Todo) {
@@ -952,57 +989,63 @@ export class TodoListComponent implements OnInit, OnDestroy {
     }
 
     // Lock the todo before opening dialog
-    this.apiService.lockTodo(todo.id).subscribe({
-      next: (lockResponse) => {
-        // Open dialog after successfully locking
-        const dialogRef = this.dialog.open(TodoDialogComponent, {
-          width: '500px',
-          maxWidth: '90vw',
-          position: { top: '10vh' },
-          disableClose: false,
-          data: { mode: 'edit', todo }
-        });
-
-        dialogRef.afterClosed().subscribe(result => {
-          // Always unlock when dialog closes (whether saved or cancelled)
-          this.apiService.unlockTodo(todo.id).subscribe({
-            next: () => {
-              if (result) {
-                this.updateTodo(todo.id, result);
-              }
-            },
-            error: (err) => {
-              console.error('Failed to unlock todo:', err);
-              // Still update if user saved changes
-              if (result) {
-                this.updateTodo(todo.id, result);
-              }
-            }
+    this.apiService.lockTodo(todo.id)
+      
+      .subscribe({
+        next: (lockResponse) => {
+          // Open dialog after successfully locking
+          const dialogRef = this.dialog.open(TodoDialogComponent, {
+            width: '500px',
+            maxWidth: '90vw',
+            position: { top: '10vh' },
+            disableClose: false,
+            data: { mode: 'edit', todo }
           });
-        });
-      },
-      error: (err) => {
-        // Show error if locking failed (e.g., already locked)
-        const errorMsg = err.error?.message || 'Failed to lock todo';
-        this.showSnackBar(errorMsg, 'error');
-        console.error('Lock todo error:', err);
-      }
-    });
+
+          dialogRef.afterClosed().subscribe(result => {
+            // Always unlock when dialog closes (whether saved or cancelled)
+            this.apiService.unlockTodo(todo.id)
+              
+              .subscribe({
+                next: () => {
+                  if (result) {
+                    this.updateTodo(todo.id, result);
+                  }
+                },
+                error: (err) => {
+                  console.error('Failed to unlock todo:', err);
+                  // Still update if user saved changes
+                  if (result) {
+                    this.updateTodo(todo.id, result);
+                  }
+                }
+              });
+          });
+        },
+        error: (err) => {
+          // Show error if locking failed (e.g., already locked)
+          const errorMsg = err.error?.message || 'Failed to lock todo';
+          this.showSnackBar(errorMsg, 'error');
+          console.error('Lock todo error:', err);
+        }
+      });
   }
 
   updateTodo(id: string, updateData: UpdateTodoRequest) {
-    this.apiService.updateTodo(id, updateData).subscribe({
-      next: (updatedTodo) => {
-        this.todos.update(todos => 
-          todos.map(todo => todo.id === id ? updatedTodo : todo)
-        );
-        this.showSnackBar('Todo updated successfully', 'success');
-      },
-      error: (err) => {
-        this.showSnackBar('Failed to update todo', 'error');
-        console.error('Update todo error:', err);
-      }
-    });
+    this.apiService.updateTodo(id, updateData)
+      
+      .subscribe({
+        next: (updatedTodo: Todo) => {
+          this.todos.update(todos => 
+            todos.map(todo => todo.id === id ? updatedTodo : todo)
+          );
+          this.showSnackBar('Todo updated successfully', 'success');
+        },
+        error: (err) => {
+          this.showSnackBar('Failed to update todo', 'error');
+          console.error('Update todo error:', err);
+        }
+      });
   }
 
   toggleComplete(todo: Todo) {
@@ -1012,16 +1055,18 @@ export class TodoListComponent implements OnInit, OnDestroy {
 
   deleteTodo(todo: Todo) {
     if (confirm(`Are you sure you want to delete "${todo.title}"?`)) {
-      this.apiService.deleteTodo(todo.id).subscribe({
-        next: () => {
-          this.todos.update(todos => todos.filter(t => t.id !== todo.id));
-          this.showSnackBar('Todo deleted successfully', 'success');
-        },
-        error: (err) => {
-          this.showSnackBar('Failed to delete todo', 'error');
-          console.error('Delete todo error:', err);
-        }
-      });
+      this.apiService.deleteTodo(todo.id)
+        
+        .subscribe({
+          next: () => {
+            this.todos.update(todos => todos.filter(t => t.id !== todo.id));
+            this.showSnackBar('Todo deleted successfully', 'success');
+          },
+          error: (err) => {
+            this.showSnackBar('Failed to delete todo', 'error');
+            console.error('Delete todo error:', err);
+          }
+        });
     }
   }
 
@@ -1040,11 +1085,11 @@ export class TodoListComponent implements OnInit, OnDestroy {
   }
 
   isCurrentUser(userId: string): boolean {
-    return userId === this.currentUserId();
+    return userId === this.currentUserId;
   }
 
   getUsernameById(userId: string): string {
-    const user = this.connectedUsers().find(u => u.userId === userId);
+    const user = this.connectedUsers.find(u => u.userId === userId);
     return user?.username || 'Unknown User';
   }
 
@@ -1068,16 +1113,18 @@ export class TodoListComponent implements OnInit, OnDestroy {
   }
 
   logout() {
-    this.authService.logout().subscribe({
-      next: () => {
-        this.showSnackBar('Logged out successfully', 'success');
-        this.router.navigate(['/login']);
-      },
-      error: () => {
-        // Even on error, navigate to login
-        this.router.navigate(['/login']);
-      }
-    });
+    this.authService.logout()
+      
+      .subscribe({
+        next: () => {
+          this.showSnackBar('Logged out successfully', 'success');
+          this.router.navigate(['/login']);
+        },
+        error: () => {
+          // Even on error, navigate to login
+          this.router.navigate(['/login']);
+        }
+      });
   }
 
   private showSnackBar(message: string, type: 'success' | 'error' | 'warning') {

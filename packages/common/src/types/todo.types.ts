@@ -1,3 +1,5 @@
+import { ApiResponse, PaginatedResponse } from './api.types';
+
 /**
  * Priority enum for todos
  */
@@ -13,9 +15,18 @@ export interface Todo {
   completed: boolean;
   priority: Priority;
   createdBy: string;
+  /** ISO 8601 date string
+   * @example "2024-12-02T10:00:00.000Z"
+   */
   createdAt: string;
+  /** ISO 8601 date string
+   * @example "2024-12-02T10:00:00.000Z"
+   */
   updatedAt: string;
   lockedBy?: string;
+  /** ISO 8601 date string
+   * @example "2024-12-02T10:00:00.000Z"
+   */
   lockedAt?: string;
 }
 
@@ -31,11 +42,7 @@ export interface CreateTodoRequest {
 /**
  * Create todo response
  */
-export interface CreateTodoResponse {
-  success: boolean;
-  message: string;
-  data: Todo;
-}
+export type CreateTodoResponse = ApiResponse<Todo>;
 
 /**
  * Update todo request
@@ -50,19 +57,12 @@ export interface UpdateTodoRequest {
 /**
  * Update todo response
  */
-export interface UpdateTodoResponse {
-  success: boolean;
-  message: string;
-  data: Todo;
-}
+export type UpdateTodoResponse = ApiResponse<Todo>;
 
 /**
  * Get todo response
  */
-export interface GetTodoResponse {
-  success: boolean;
-  data: Todo;
-}
+export type GetTodoResponse = ApiResponse<Todo>;
 
 /**
  * Get all todos query parameters
@@ -75,51 +75,38 @@ export interface GetTodosQueryParams {
 }
 
 /**
- * Get all todos response
+ * Get all todos response with pagination
  */
-export interface GetTodosResponse {
-  success: boolean;
-  data: Todo[];
-  total?: number;
-  page?: number;
-  limit?: number;
-  totalPages?: number;
-}
+export type GetTodosResponse = ApiResponse<PaginatedResponse<Todo>>;
 
 /**
  * Delete todo response
  */
-export interface DeleteTodoResponse {
-  success: boolean;
-  message: string;
-}
+export type DeleteTodoResponse = ApiResponse<void>;
 
 /**
  * Toggle todo response
  */
-export interface ToggleTodoResponse {
-  success: boolean;
-  message: string;
-  data: Todo;
+export type ToggleTodoResponse = ApiResponse<Todo>;
+
+/**
+ * Lock todo data
+ */
+export interface LockTodoData {
+  id: string;
+  lockedBy: string;
+  /** ISO 8601 date string
+   * @example "2024-12-02T10:00:00.000Z"
+   */
+  lockedAt: string;
 }
 
 /**
  * Lock todo response
  */
-export interface LockTodoResponse {
-  success: boolean;
-  message: string;
-  data: {
-    id: string;
-    lockedBy: string;
-    lockedAt: string;
-  };
-}
+export type LockTodoResponse = ApiResponse<LockTodoData>;
 
 /**
  * Unlock todo response
  */
-export interface UnlockTodoResponse {
-  success: boolean;
-  message: string;
-}
+export type UnlockTodoResponse = ApiResponse<void>

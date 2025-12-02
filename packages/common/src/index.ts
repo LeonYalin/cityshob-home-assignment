@@ -6,3 +6,4 @@ export * from './types/api.types';
 
 // Export constants
 export * from './constants/socket-events';
+export * from './constants/validation';

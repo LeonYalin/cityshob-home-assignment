@@ -15,7 +15,8 @@ describe('AuthService', () => {
     httpMock = TestBed.inject(HttpTestingController);
     
     // Handle the automatic getCurrentUser call from constructor
-    const initialReq = httpMock.expectOne('http://localhost:4000/api/auth/me');
+    // Environment uses window.location.origin which in tests is http://localhost:9876
+    const initialReq = httpMock.expectOne('http://localhost:9876/api/auth/me');
     initialReq.error(new ProgressEvent('error'));
   });
 
@@ -53,7 +54,7 @@ describe('AuthService', () => {
       expect(service.currentUser()).toEqual(mockResponse.data.user);
     });
 
-    const req = httpMock.expectOne('http://localhost:4000/api/auth/login');
+    const req = httpMock.expectOne('http://localhost:9876/api/auth/login');
     expect(req.request.method).toBe('POST');
     req.flush(mockResponse);
   });

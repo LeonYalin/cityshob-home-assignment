@@ -1,6 +1,7 @@
 import { Document, Model, Schema, model } from 'mongoose';
 import { CreateTodoInput } from '../schemas/todo.schema';
 import type { Priority } from '@real-time-todo/common';
+import { LOCK_TIMEOUT_MS } from '../constants/timeouts';
 
 // Document interface extending Mongoose Document
 export interface TodoDoc extends Document {
@@ -103,7 +104,7 @@ todoSchema.statics.findByIdAndLock = async function (
       $or: [
         { isLocked: false },
         { lockedBy: userId }, // User can re-lock their own locked todo
-        { lockedAt: { $lt: new Date(Date.now() - 5 * 60 * 1000) } } // 5 minute timeout
+        { lockedAt: { $lt: new Date(Date.now() - LOCK_TIMEOUT_MS) } }
       ]
     },
     { 
@@ -130,7 +131,7 @@ todoSchema.statics.unlockTodo = async function (id: string, userId?: string): Pr
   if (userId) {
     findQuery.$or = [
       { lockedBy: userId },
-      { lockedAt: { $lt: new Date(Date.now() - 5 * 60 * 1000) } }
+      { lockedAt: { $lt: new Date(Date.now() - LOCK_TIMEOUT_MS) } }
     ];
   }
 

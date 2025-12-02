@@ -482,30 +482,30 @@ export class RegisterComponent {
       const registerData: RegisterRequest = this.registerForm.value;
       
       this.authService.register(registerData).subscribe({
-        next: (response) => {
-          this.isLoading.set(false);
-          this.snackBar.open('Account created successfully! Welcome to Todo Manager.', 'Close', {
-            duration: 4000,
-            panelClass: ['success-snackbar']
-          });
-          this.router.navigate(['/todos']);
-        },
-        error: (error) => {
-          this.isLoading.set(false);
-          let errorMessage = 'Registration failed. Please try again.';
-          
-          if (error.error?.errors && Array.isArray(error.error.errors)) {
-            errorMessage = error.error.errors.map((e: any) => e.message).join(', ');
-          } else if (error.error?.message) {
-            errorMessage = error.error.message;
+          next: (response) => {
+            this.isLoading.set(false);
+            this.snackBar.open('Account created successfully! Welcome to Todo Manager.', 'Close', {
+              duration: 4000,
+              panelClass: ['success-snackbar']
+            });
+            this.router.navigate(['/todos']);
+          },
+          error: (error: { error?: { errors?: Array<{ message: string }>; message?: string } }) => {
+            this.isLoading.set(false);
+            let errorMessage = 'Registration failed. Please try again.';
+            
+            if (error.error?.errors && Array.isArray(error.error.errors)) {
+              errorMessage = error.error.errors.map((e) => e.message).join(', ');
+            } else if (error.error?.message) {
+              errorMessage = error.error.message;
+            }
+            
+            this.snackBar.open(errorMessage, 'Close', {
+              duration: 5000,
+              panelClass: ['error-snackbar']
+            });
           }
-          
-          this.snackBar.open(errorMessage, 'Close', {
-            duration: 5000,
-            panelClass: ['error-snackbar']
-          });
-        }
-      });
+        });
     }
   }
 }

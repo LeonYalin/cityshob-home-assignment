@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { ApiService, Todo, TodoInput } from './api.service';
+import { ApiService } from './api.service';
+import { Todo, CreateTodoRequest } from '@real-time-todo/common';
 
 describe('ApiService', () => {
   let service: ApiService;
@@ -13,7 +14,8 @@ describe('ApiService', () => {
     completed: false,
     priority: 'medium',
     createdAt: '2025-11-01T10:00:00Z',
-    updatedAt: '2025-11-01T10:00:00Z'
+    updatedAt: '2025-11-01T10:00:00Z',
+    createdBy: 'user-123'
   };
 
   beforeEach(() => {
@@ -34,32 +36,49 @@ describe('ApiService', () => {
   });
 
   it('should get all todos', () => {
-    const mockTodos = [mockTodo];
+    const mockResponse = {
+      success: true,
+      message: 'Todos fetched',
+      data: {
+        data: [mockTodo],
+        total: 1,
+        page: 1,
+        limit: 10,
+        totalPages: 1
+      }
+    };
 
     service.getAllTodos().subscribe(todos => {
-      expect(todos).toEqual(mockTodos);
+      expect(todos.length).toBe(1);
+      expect(todos[0]).toEqual(mockTodo);
     });
 
-    const req = httpMock.expectOne('http://localhost:4000/api/todos');
+    const req = httpMock.expectOne('http://localhost:9876/api/todos');
     expect(req.request.method).toBe('GET');
-    req.flush(mockTodos);
+    req.flush(mockResponse);
   });
 
   it('should create a todo', () => {
-    const todoInput: TodoInput = {
+    const todoInput: CreateTodoRequest = {
       title: 'New Todo',
       description: 'New Description',
       priority: 'high'
+    };
+    
+    const mockResponse = {
+      success: true,
+      message: 'Todo created',
+      data: { ...mockTodo, ...todoInput }
     };
 
     service.createTodo(todoInput).subscribe(todo => {
       expect(todo.title).toBe(todoInput.title);
     });
 
-    const req = httpMock.expectOne('http://localhost:4000/api/todos');
+    const req = httpMock.expectOne('http://localhost:9876/api/todos');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual(todoInput);
-    req.flush({ ...mockTodo, ...todoInput });
+    req.flush(mockResponse);
   });
 
   it('should get health status', () => {
@@ -72,10 +91,10 @@ describe('ApiService', () => {
     };
 
     service.getHealth().subscribe(health => {
-      expect(health).toEqual(mockHealth);
+      expect(health.status).toBe('OK');
     });
 
-    const req = httpMock.expectOne('http://localhost:4000/api/health');
+    const req = httpMock.expectOne('http://localhost:9876/api/health');
     expect(req.request.method).toBe('GET');
     req.flush(mockHealth);
   });

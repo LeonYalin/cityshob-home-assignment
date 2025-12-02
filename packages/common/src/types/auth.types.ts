@@ -1,3 +1,5 @@
+import { ApiResponse } from './api.types';
+
 /**
  * User interface
  */
@@ -5,7 +7,13 @@ export interface User {
   id: string;
   username: string;
   email: string;
+  /** ISO 8601 date string
+   * @example "2024-12-02T10:00:00.000Z"
+   */
   createdAt: string;
+  /** ISO 8601 date string
+   * @example "2024-12-02T10:00:00.000Z"
+   */
   updatedAt: string;
 }
 
@@ -19,15 +27,17 @@ export interface RegisterRequest {
 }
 
 /**
+ * Auth data response
+ */
+export interface AuthData {
+  user: User;
+  token?: string;
+}
+
+/**
  * Register response
  */
-export interface RegisterResponse {
-  success: boolean;
-  message: string;
-  data: {
-    user: User;
-  };
-}
+export type RegisterResponse = ApiResponse<AuthData>;
 
 /**
  * Login request
@@ -40,28 +50,14 @@ export interface LoginRequest {
 /**
  * Login response
  */
-export interface LoginResponse {
-  success: boolean;
-  message: string;
-  data: {
-    user: User;
-  };
-}
+export type LoginResponse = ApiResponse<AuthData>;
 
 /**
  * Logout response
  */
-export interface LogoutResponse {
-  success: boolean;
-  message: string;
-}
+export type LogoutResponse = ApiResponse<void>;
 
 /**
  * Get current user response
  */
-export interface GetCurrentUserResponse {
-  success: boolean;
-  data: {
-    user: User;
-  };
-}
+export type GetCurrentUserResponse = ApiResponse<{ user: User }>

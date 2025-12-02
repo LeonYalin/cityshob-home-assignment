@@ -120,9 +120,10 @@ export const authController = {
 
       res.json({
         success: true,
+        message: 'User retrieved successfully',
         data: {
           user: {
-            id: user.id,
+            id: '_id' in user ? user._id.toString() : user.id,
             username: user.username,
             email: user.email,
             createdAt: user.createdAt.toISOString(),

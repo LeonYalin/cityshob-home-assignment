@@ -450,23 +450,23 @@ export class LoginComponent {
       const loginData: LoginRequest = this.loginForm.value;
       
       this.authService.login(loginData).subscribe({
-        next: (response) => {
-          this.isLoading.set(false);
-          this.snackBar.open('Login successful! Welcome back.', 'Close', {
-            duration: 3000,
-            panelClass: ['success-snackbar']
-          });
-          this.router.navigate(['/todos']);
-        },
-        error: (error) => {
-          this.isLoading.set(false);
-          const errorMessage = error.error?.message || 'Login failed. Please try again.';
-          this.snackBar.open(errorMessage, 'Close', {
-            duration: 5000,
-            panelClass: ['error-snackbar']
-          });
-        }
-      });
+          next: (response) => {
+            this.isLoading.set(false);
+            this.snackBar.open('Login successful! Welcome back.', 'Close', {
+              duration: 3000,
+              panelClass: ['success-snackbar']
+            });
+            this.router.navigate(['/todos']);
+          },
+          error: (error) => {
+            this.isLoading.set(false);
+            const errorMessage = error.error?.message || 'Login failed. Please try again.';
+            this.snackBar.open(errorMessage, 'Close', {
+              duration: 5000,
+              panelClass: ['error-snackbar']
+            });
+          }
+        });
     }
   }
 }

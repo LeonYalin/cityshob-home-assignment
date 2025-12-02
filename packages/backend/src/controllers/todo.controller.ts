@@ -51,7 +51,14 @@ export const todoController = {
       
       res.json({
         success: true,
-        data: todos.map(todoDocToTodo)
+        message: 'Todos retrieved successfully',
+        data: {
+          data: todos.map(todoDocToTodo),
+          total: todos.length,
+          page: queryParams.page || 1,
+          limit: queryParams.limit || 10,
+          totalPages: Math.ceil(todos.length / (queryParams.limit || 10))
+        }
       } satisfies GetTodosResponse);
     } catch (error) {
       logger.error('Error getting all todos:', error);
@@ -106,6 +113,7 @@ export const todoController = {
       
       res.json({
         success: true,
+        message: 'Todo retrieved successfully',
         data: todoDocToTodo(todo)
       } satisfies GetTodoResponse);
     } catch (error) {

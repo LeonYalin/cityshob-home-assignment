@@ -5,9 +5,10 @@ import {
   ConnectedUser,
   TodoEvent,
   TodoDeletedEvent,
-  TodoLockEvent,
-  TodoUnlockEvent
+  TodoLockedEvent,
+  TodoUnlockedEvent
 } from '@real-time-todo/common';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -23,22 +24,31 @@ export class WebSocketService {
   private todoCreatedCallbacks: Array<(event: TodoEvent) => void> = [];
   private todoUpdatedCallbacks: Array<(event: TodoEvent) => void> = [];
   private todoDeletedCallbacks: Array<(event: TodoDeletedEvent) => void> = [];
-  private todoLockedCallbacks: Array<(event: TodoLockEvent) => void> = [];
-  private todoUnlockedCallbacks: Array<(event: TodoUnlockEvent) => void> = [];
+  private todoLockedCallbacks: Array<(event: TodoLockedEvent) => void> = [];
+  private todoUnlockedCallbacks: Array<(event: TodoUnlockedEvent) => void> = [];
 
   constructor() {}
+
+  /**
+   * Environment-aware logging
+   */
+  private log(message: string, ...args: any[]): void {
+    if (!environment.production) {
+      console.log(`[WebSocket] ${message}`, ...args);
+    }
+  }
 
   /**
    * Connect to WebSocket server
    */
   public connect(): void {
     if (this.socket?.connected) {
-      console.log('WebSocket already connected');
+      this.log('Already connected');
       return;
     }
 
-    console.log('Connecting to WebSocket...');
-    this.socket = io(window.location.origin, {
+    this.log('Connecting to WebSocket...');
+    this.socket = io('http://localhost:4000', {
       transports: ['websocket', 'polling'],
       withCredentials: true,
       extraHeaders: {
@@ -47,7 +57,7 @@ export class WebSocketService {
     });
 
     this.setupEventListeners();
-    console.log('WebSocket connection initiated');
+    this.log('Connection initiated');
   }
 
   /**
@@ -59,7 +69,7 @@ export class WebSocketService {
       this.socket = null;
       this.isConnected.set(false);
       this.connectedUsers.set([]);
-      console.log('WebSocket disconnected');
+      this.log('Disconnected');
     }
   }
 
@@ -71,25 +81,25 @@ export class WebSocketService {
 
     // Connection events
     this.socket.on(socketEvents.connect, () => {
-      console.log('WebSocket connected:', this.socket?.id);
+      this.log('Connected:', this.socket?.id);
       this.isConnected.set(true);
       this.requestUsersList();
     });
 
     this.socket.on(socketEvents.disconnect, (reason) => {
-      console.log('WebSocket disconnected:', reason);
+      this.log('Disconnected:', reason);
       this.isConnected.set(false);
       this.connectedUsers.set([]);
     });
 
     this.socket.on(socketEvents.connectError, (error) => {
-      console.error('WebSocket connection error:', error);
+      this.log('Connection error:', error);
       this.isConnected.set(false);
     });
 
     // User presence events
     this.socket.on(socketEvents.userConnected, (user: Omit<ConnectedUser, 'connectedAt'> & { connectedAt: string }) => {
-      console.log('User connected:', user);
+      this.log('User connected:', user);
       const currentUsers = this.connectedUsers();
       const connectedUser: ConnectedUser = {
         ...user,
@@ -99,13 +109,13 @@ export class WebSocketService {
     });
 
     this.socket.on(socketEvents.userDisconnected, (data: { userId: string; username: string }) => {
-      console.log('User disconnected:', data);
+      this.log('User disconnected:', data);
       const currentUsers = this.connectedUsers();
       this.connectedUsers.set(currentUsers.filter(u => u.userId !== data.userId));
     });
 
     this.socket.on(socketEvents.usersList, (users: Array<Omit<ConnectedUser, 'connectedAt'> & { connectedAt: string }>) => {
-      console.log('Received users list:', users);
+      this.log('Received users list:', users);
       const connectedUsers: ConnectedUser[] = users.map(user => ({
         ...user,
         connectedAt: user.connectedAt
@@ -115,7 +125,7 @@ export class WebSocketService {
 
     // Todo CRUD events
     this.socket.on(socketEvents.todoCreated, (event: Omit<TodoEvent, 'timestamp'> & { timestamp: string }) => {
-      console.log('Todo created:', event);
+      this.log('Todo created:', event);
       const todoEvent: TodoEvent = {
         ...event,
         timestamp: event.timestamp
@@ -124,7 +134,7 @@ export class WebSocketService {
     });
 
     this.socket.on(socketEvents.todoUpdated, (event: Omit<TodoEvent, 'timestamp'> & { timestamp: string }) => {
-      console.log('Todo updated:', event);
+      this.log('Todo updated:', event);
       const todoEvent: TodoEvent = {
         ...event,
         timestamp: event.timestamp
@@ -133,7 +143,7 @@ export class WebSocketService {
     });
 
     this.socket.on(socketEvents.todoDeleted, (event: Omit<TodoDeletedEvent, 'timestamp'> & { timestamp: string }) => {
-      console.log('Todo deleted:', event);
+      this.log('Todo deleted:', event);
       const todoEvent: TodoDeletedEvent = {
         ...event,
         timestamp: event.timestamp
@@ -142,18 +152,18 @@ export class WebSocketService {
     });
 
     // Todo locking events
-    this.socket.on(socketEvents.todoLocked, (event: Omit<TodoLockEvent, 'lockedAt'> & { lockedAt: string }) => {
-      console.log('Todo locked:', event);
-      const lockEvent: TodoLockEvent = {
+    this.socket.on(socketEvents.todoLocked, (event: Omit<TodoLockedEvent, 'lockedAt'> & { lockedAt: string }) => {
+      this.log('Todo locked:', event);
+      const lockEvent: TodoLockedEvent = {
         ...event,
         lockedAt: event.lockedAt
       };
       this.todoLockedCallbacks.forEach(cb => cb(lockEvent));
     });
 
-    this.socket.on(socketEvents.todoUnlocked, (event: Omit<TodoUnlockEvent, 'unlockedAt'> & { unlockedAt: string }) => {
-      console.log('Todo unlocked:', event);
-      const unlockEvent: TodoUnlockEvent = {
+    this.socket.on(socketEvents.todoUnlocked, (event: Omit<TodoUnlockedEvent, 'unlockedAt'> & { unlockedAt: string }) => {
+      this.log('Todo unlocked:', event);
+      const unlockEvent: TodoUnlockedEvent = {
         ...event,
         unlockedAt: event.unlockedAt
       };
@@ -162,11 +172,11 @@ export class WebSocketService {
 
     // Error events
     this.socket.on(socketEvents.error, (error: { message: string }) => {
-      console.error('WebSocket error:', error);
+      this.log('Error:', error);
     });
 
     this.socket.on(socketEvents.authError, (error: { message: string }) => {
-      console.error('WebSocket auth error:', error);
+      this.log('Auth error:', error);
       this.disconnect();
     });
   }
@@ -191,37 +201,72 @@ export class WebSocketService {
 
   /**
    * Register callback for todo created events
+   * Returns a cleanup function to unregister the callback
    */
-  public onTodoCreated(callback: (event: TodoEvent) => void): void {
+  public onTodoCreated(callback: (event: TodoEvent) => void): () => void {
     this.todoCreatedCallbacks.push(callback);
+    return () => {
+      const index = this.todoCreatedCallbacks.indexOf(callback);
+      if (index > -1) {
+        this.todoCreatedCallbacks.splice(index, 1);
+      }
+    };
   }
 
   /**
    * Register callback for todo updated events
+   * Returns a cleanup function to unregister the callback
    */
-  public onTodoUpdated(callback: (event: TodoEvent) => void): void {
+  public onTodoUpdated(callback: (event: TodoEvent) => void): () => void {
     this.todoUpdatedCallbacks.push(callback);
+    return () => {
+      const index = this.todoUpdatedCallbacks.indexOf(callback);
+      if (index > -1) {
+        this.todoUpdatedCallbacks.splice(index, 1);
+      }
+    };
   }
 
   /**
    * Register callback for todo deleted events
+   * Returns a cleanup function to unregister the callback
    */
-  public onTodoDeleted(callback: (event: TodoDeletedEvent) => void): void {
+  public onTodoDeleted(callback: (event: TodoDeletedEvent) => void): () => void {
     this.todoDeletedCallbacks.push(callback);
+    return () => {
+      const index = this.todoDeletedCallbacks.indexOf(callback);
+      if (index > -1) {
+        this.todoDeletedCallbacks.splice(index, 1);
+      }
+    };
   }
 
   /**
    * Register callback for todo locked events
+   * Returns a cleanup function to unregister the callback
    */
-  public onTodoLocked(callback: (event: TodoLockEvent) => void): void {
+  public onTodoLocked(callback: (event: TodoLockedEvent) => void): () => void {
     this.todoLockedCallbacks.push(callback);
+    return () => {
+      const index = this.todoLockedCallbacks.indexOf(callback);
+      if (index > -1) {
+        this.todoLockedCallbacks.splice(index, 1);
+      }
+    };
   }
 
   /**
    * Register callback for todo unlocked events
+   * Returns a cleanup function to unregister the callback
    */
-  public onTodoUnlocked(callback: (event: TodoUnlockEvent) => void): void {
+  public onTodoUnlocked(callback: (event: TodoUnlockedEvent) => void): () => void {
     this.todoUnlockedCallbacks.push(callback);
+    return () => {
+      const index = this.todoUnlockedCallbacks.indexOf(callback);
+      if (index > -1) {
+        this.todoUnlockedCallbacks.splice(index, 1);
+      }
+    };
   }
 
   /**

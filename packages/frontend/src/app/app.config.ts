@@ -1,10 +1,11 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZonelessChangeDetection, APP_INITIALIZER } from '@angular/core';
+import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZonelessChangeDetection, APP_INITIALIZER, ErrorHandler } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { authInterceptor } from './interceptors/auth.interceptor';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { AuthService } from './services/auth.service';
 import { WebSocketService } from './services/websocket.service';
+import { GlobalErrorHandler } from './services/error-handler.service';
 
 import { routes } from './app.routes';
 
@@ -30,6 +31,10 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([authInterceptor])
     ),
     provideNoopAnimations(),
+    {
+      provide: ErrorHandler,
+      useClass: GlobalErrorHandler
+    },
     {
       provide: APP_INITIALIZER,
       useFactory: initializeWebSocketFactory,
