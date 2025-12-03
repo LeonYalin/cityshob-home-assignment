@@ -47,8 +47,8 @@ export class WebSocketService {
       return;
     }
 
-    this.log('Connecting to WebSocket...');
-    this.socket = io('http://localhost:4000', {
+    this.log('Connecting to WebSocket...', environment.socketUrl);
+    this.socket = io(environment.socketUrl, {
       transports: ['websocket', 'polling'],
       withCredentials: true,
       extraHeaders: {
