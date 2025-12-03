@@ -32,6 +32,7 @@ A modern, collaborative to-do list application featuring real-time synchronizati
 - JWT Authentication
 - bcrypt
 - TypeScript
+- **Traditional app.ts initialization pattern**
 
 ### Architecture
 - Monorepo with npm workspaces
@@ -111,6 +112,8 @@ cityshob-home-assignment/
 ├── packages/
 │   ├── backend/           # Node.js API server
 │   │   ├── src/
+│   │   │   ├── app.ts          # Express config & services
+│   │   │   ├── server.ts       # Entry point
 │   │   │   ├── controllers/    # HTTP request handlers
 │   │   │   ├── services/       # Business logic
 │   │   │   ├── repositories/   # Data access layer
@@ -153,8 +156,9 @@ cityshob-home-assignment/
 - **TypeScript**: Full type safety across frontend and backend
 - **Shared Types**: Common package eliminates code duplication
 - **Repository Pattern**: Clean separation of data access
+- **Service Initialization**: Traditional app.ts pattern for clarity
 - **Dependency Injection**: Testable, maintainable code structure
-- **Comprehensive Tests**: 215+ tests with Jest
+- **Comprehensive Tests**: 187+ tests with Jest
 
 ## License
 

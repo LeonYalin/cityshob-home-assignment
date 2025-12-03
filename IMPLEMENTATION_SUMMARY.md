@@ -1,6 +1,6 @@
 # Real-Time To-Do App — Complete Implementation Guide
 
-*Last Updated: November 29, 2025 - Real-Time Features & Todo Locking Completed*
+*Last Updated: December 3, 2025 - Service Initialization Refactored*
 
 ## 📊 Project Status & Recent Enhancements
 
@@ -181,7 +181,7 @@ We have successfully **added comprehensive unit tests** for all components that 
    - Optional field handling
    - Date to ISO string conversion
 
-**Test Coverage Results**: ✅ **215 tests passing** (+19 new tests) | ✅ **100% socket service coverage** | ✅ **Common package integration verified**
+**Test Coverage Results**: ✅ **187 tests passing** (+19 new tests) | ✅ **100% socket service coverage** | ✅ **Common package integration verified**
 
 ### ✅ **Testing Best Practices Implementation - COMPLETED**
 
@@ -203,8 +203,10 @@ We have successfully implemented Node.js testing best practices across the entir
 - ✅ Node.js/TypeScript Express server with live reload
 - ✅ Production build pipeline and deployment setup
 - ✅ CORS, Helmet, Morgan middleware with credentials support
-- ✅ Jest testing framework with comprehensive test coverage (215 tests)
-- ✅ **Class-based architecture with dependency injection**
+- ✅ Jest testing framework with comprehensive test coverage (187 tests)
+- ✅ **Traditional app.ts initialization pattern (like Express best practices)**
+- ✅ **Services initialized at app startup with dependency injection**
+- ✅ **Clean separation: server.ts (entry point) + app.ts (Express config)**
 - ✅ **Repository pattern with MongoDB and in-memory fallback**
 - ✅ **Zod validation schemas for type-safe APIs**
 - ✅ **Structured logging with context-aware Logger class**
@@ -272,7 +274,7 @@ cd packages/frontend && npm start
 
 # Run tests
 cd packages/backend && npm test
-# ✅ All 196 tests passing (including cookie-based auth tests)
+# ✅ All 187 tests passing (including cookie-based auth tests)
 ```
 
 ### **What's Currently Working**
@@ -527,13 +529,14 @@ real-time-todo-app/
     │   │   │   │   ├── fake-logger.ts
     │   │   │   │   └── fake-todo-repository.ts
     │   │   │   └── integration/  # Integration tests
+    │   │   ├── app.ts           # ✅ Express configuration + service initialization
+    │   │   ├── server.ts        # ✅ Entry point (database + server startup)
     │   │   ├── controllers/     # ✅ HTTP handlers + tests
     │   │   ├── services/        # ✅ Business logic + tests
     │   │   ├── repositories/    # ✅ Data access + tests
     │   │   ├── schemas/         # ✅ Validation + tests
     │   │   ├── socket/          # ✅ Socket.IO server (uses common types)
-    │   │   ├── errors/          # ✅ Error handling + tests
-    │   │   └── server.ts        # Express server
+    │   │   └── errors/          # ✅ Error handling + tests
     │   ├── dist/               # Production build
     │   └── package.json        # Backend dependencies
     └── frontend/               # Angular application
@@ -839,7 +842,57 @@ describe('TodoRepository', () => {
 
 ---
 
-## � Backend Architecture Details
+## 🏗️ Backend Architecture Details
+
+### **Service Initialization Pattern**
+
+Following traditional Express.js best practices, services are initialized at application startup:
+
+#### **app.ts - Express Configuration & Service Initialization**
+```typescript
+import express from 'express';
+import { TodoService } from './services/todo.service';
+import { AuthService } from './services/auth.service';
+import { DatabaseService } from './services/database.service';
+import { MongoTodoRepository } from './repositories/mongo-todo.repository';
+
+// Initialize services at module load - cached by Node.js
+const todoRepository = new MongoTodoRepository(repositoryLogger);
+export const todoService = new TodoService(todoRepository, todoLogger);
+export const authService = new AuthService();
+export const databaseService = DatabaseService.getInstance(databaseLogger);
+
+// Create Express app with all middleware
+const app = express();
+app.use(cors({ credentials: true }));
+app.use(express.json());
+app.use('/api', apiRoutes);
+
+export { app };
+```
+
+#### **server.ts - Entry Point**
+```typescript
+import { createServer } from 'http';
+import { app, databaseService } from './app';
+import { SocketService } from './socket/socket.service';
+
+const startServer = async () => {
+  // Initialize database
+  await databaseService.connect();
+  
+  // Create HTTP server and Socket.IO
+  const httpServer = createServer(app);
+  const socketService = new SocketService(httpServer);
+  
+  // Start listening
+  httpServer.listen(PORT, () => {
+    logger.info('Server running');
+  });
+};
+
+startServer();
+```
 
 ### **Class-Based Implementation**
 
