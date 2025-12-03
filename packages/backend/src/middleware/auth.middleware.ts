@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { JwtPayload } from '../services/auth.service';
 import { ValidationError } from '../errors';
-import { authService } from '../services/instances';
+import { authService } from '../app';
 
 // Extend Request interface to include user
 declare global {

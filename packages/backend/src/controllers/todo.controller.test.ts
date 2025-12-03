@@ -9,8 +9,8 @@ jest.mock('../server', () => ({
   getSocketService: jest.fn().mockReturnValue(null),
 }));
 
-// Mock the todoService from instances
-jest.mock('../services/instances', () => ({
+// Mock the todoService from app
+jest.mock('../app', () => ({
   todoService: {
     getAllTodos: jest.fn(),
     getTodoById: jest.fn(),
@@ -61,7 +61,7 @@ describe('TodoController', () => {
 
   beforeEach(() => {
     // Get the mocked todoService
-    const { todoService } = require('../services/instances');
+    const { todoService } = require('../app');
     mockTodoService = todoService;
 
     // Reset all mocks

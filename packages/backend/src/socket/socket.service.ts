@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { Logger } from '../services/logger.service';
 import { type ConnectedUser, socketEvents } from '@real-time-todo/common';
 import { TodoDoc } from '../models/todo.model';
-import { todoService } from '../services/instances';
+import { todoService } from '../app';
 import { config } from '../config/env.config';
 
 const logger = new Logger('SocketService');

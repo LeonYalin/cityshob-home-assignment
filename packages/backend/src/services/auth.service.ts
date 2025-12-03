@@ -4,7 +4,7 @@ import { Logger } from './logger.service';
 import { ValidationError } from '../errors';
 import { LoginInput, RegisterInput } from '../schemas/auth.schema';
 import { InMemoryUserStore, SimpleUser } from '../repositories/in-memory-user.repository';
-import { databaseService } from './instances';
+import { databaseService } from '../app';
 
 export interface AuthResponse {
   user: {

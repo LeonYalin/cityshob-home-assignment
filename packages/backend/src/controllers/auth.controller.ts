@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { authService } from '../services/instances';
+import { authService } from '../app';
 import { LoginInput, RegisterInput } from '../schemas/auth.schema';
 import { ValidationError } from '../errors';
 import type { 

@@ -1,21 +1,12 @@
-import express from 'express';
-import path from 'path';
-import cors from 'cors';
-import helmet from 'helmet';
-import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
-import { apiRoutes } from './routes';
-import { errorHandler } from './middleware/error-handler.middleware';
-import { morganMiddleware } from './middleware/morgan.middleware';
-import { Logger } from './services/logger.service';
-import { databaseService } from './services/instances';
+import { app, databaseService } from './app';
 import { SocketService } from './socket/socket.service';
+import { Logger } from './services/logger.service';
 
 // Load environment variables
 dotenv.config();
 
-const app = express();
 const PORT = process.env.PORT || 4000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const logger = new Logger('Server');
@@ -29,65 +20,6 @@ const initializeDatabase = async () => {
     logger.warn('Database initialization failed, continuing with in-memory storage:', error);
   }
 };
-
-// Middleware
-app.use(helmet({
-  contentSecurityPolicy: false, // Disable for development
-}));
-
-// Use winston-morgan integration for request logging
-app.use(morganMiddleware);
-
-app.use(cors({
-  origin: process.env.SOCKET_ORIGIN_WHITELIST?.split(',') || ['http://localhost:4200'],
-  credentials: true,
-}));
-app.use(cookieParser());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// API Routes
-app.use('/api', apiRoutes);
-
-// Serve Angular frontend in production
-if (NODE_ENV === 'production') {
-  const frontendPath = path.join(__dirname, 'frontend');
-  
-  // Serve static files
-  app.use(express.static(frontendPath));
-  
-  // Catch all handler: send back Angular's index.html file for client-side routing
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(frontendPath, 'index.html'));
-  });
-} else {
-  // Development: Basic root route
-  app.get('/', (req, res) => {
-    res.json({
-      message: '🚀 Real-Time Todo API Server is running!',
-      environment: 'development',
-      endpoints: {
-        health: '/api/health',
-        todos: '/api/todos',
-      },
-      frontend: 'http://localhost:4200',
-      timestamp: new Date().toISOString(),
-    });
-  });
-}
-
-// 404 handler for API routes
-app.use('/api/*', (req, res) => {
-  logger.warn(`API endpoint not found: ${req.method} ${req.path}`);
-  res.status(404).json({
-    error: 'API endpoint not found',
-    path: req.path,
-    method: req.method,
-  });
-});
-
-// Error handling middleware (must be last)
-app.use(errorHandler);
 
 // Start server with database initialization
 let socketService: SocketService;
@@ -106,8 +38,6 @@ const startServer = async () => {
     
     // Start server
     httpServer.listen(PORT, () => {
-      // Database service is already imported as singleton
-      
       logger.info(`🚀 Server running on http://localhost:${PORT}`);
       logger.info(`📋 Environment: ${NODE_ENV}`);
       logger.info(`🔍 Health check: http://localhost:${PORT}/api/health`);
@@ -139,14 +69,12 @@ export const getSocketService = () => socketService;
 // Handle graceful shutdown
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM received, shutting down gracefully...');
-  // Database service is already imported as singleton
   await databaseService.disconnect();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   logger.info('SIGINT received, shutting down gracefully...');
-  // Database service is already imported as singleton
   await databaseService.disconnect();
   process.exit(0);
 });
@@ -155,5 +83,3 @@ process.on('SIGINT', async () => {
 if (require.main === module) {
   startServer();
 }
-
-export default app;

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { todoService } from '../services/instances';
+import { todoService } from '../app';
 import { NotFoundError } from '../errors';
 import { Logger } from '../services/logger.service';
 import { CreateTodoInput, UpdateTodoInput, TodoIdParams, TodoQueryParams } from '../schemas/todo.schema';

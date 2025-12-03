@@ -3,7 +3,7 @@ import { AuthMiddleware } from '../middleware/auth.middleware';
 import { ValidationError } from '../errors';
 
 // Mock the auth service instance
-jest.mock('../services/instances', () => ({
+jest.mock('../app', () => ({
   authService: {
     verifyToken: jest.fn(),
   }
@@ -17,7 +17,7 @@ describe('Auth Middleware', () => {
 
   beforeEach(() => {
     // Get the mocked authService
-    const { authService } = require('../services/instances');
+    const { authService } = require('../app');
     mockAuthService = authService;
     
     jest.clearAllMocks();
