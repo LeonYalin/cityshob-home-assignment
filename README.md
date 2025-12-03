@@ -158,7 +158,11 @@ cityshob-home-assignment/
 - **Repository Pattern**: Clean separation of data access
 - **Service Initialization**: Traditional app.ts pattern for clarity
 - **Dependency Injection**: Testable, maintainable code structure
-- **Comprehensive Tests**: 187+ tests with Jest
+- **Comprehensive Tests**: 248 tests with Jest (53.14% statement coverage)
+  - Controllers: 73.94% coverage (auth.controller: 96.87%)
+  - Middleware: 98.5% coverage
+  - Services: 76.9% coverage
+  - All error classes: 100% coverage
 
 ## License
 
