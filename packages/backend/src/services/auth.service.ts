@@ -33,12 +33,8 @@ export class AuthService {
 
   constructor() {
     this.logger = new Logger('AuthService');
-    this.jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
-    this.jwtExpiresIn = process.env.JWT_EXPIRES_IN || '7d';
-    
-    if (process.env.NODE_ENV === 'production' && this.jwtSecret === 'your-super-secret-jwt-key-change-in-production') {
-      this.logger.warn('Using default JWT secret in production! Please set JWT_SECRET environment variable.');
-    }
+    this.jwtSecret = appConfig.jwtSecret;
+    this.jwtExpiresIn = appConfig.jwtExpiresIn;
   }
 
   async register(registerData: RegisterInput): Promise<AuthResponse> {
