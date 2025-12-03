@@ -1,5 +1,6 @@
 
 import winston from 'winston';
+import appConfig from '../config/app.config';
 
 const logFormat = winston.format.printf(({ timestamp, level, message, ...meta }: any) => {
   return `${timestamp} [${level.toUpperCase()}]: ${message} ${
@@ -12,7 +13,7 @@ export class Logger {
 
   constructor(context?: string) {
     this.logger = winston.createLogger({
-      level: process.env.LOG_LEVEL || 'info',
+      level: appConfig.logLevel,
       format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.errors({ stack: true }),
@@ -26,7 +27,7 @@ export class Logger {
             logFormat
           ),
         }),
-        ...(process.env.NODE_ENV === 'production'
+        ...(appConfig.nodeEnv === 'production'
           ? [
               new winston.transports.File({
                 filename: 'logs/error.log',
@@ -40,7 +41,7 @@ export class Logger {
       ],
     });
 
-    if (process.env.NODE_ENV !== 'production') {
+    if (appConfig.nodeEnv !== 'production') {
       this.logger.add(
         new winston.transports.Console({
           format: winston.format.simple(),

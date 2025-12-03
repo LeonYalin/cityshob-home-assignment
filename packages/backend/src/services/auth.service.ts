@@ -5,6 +5,7 @@ import { ValidationError } from '../errors';
 import { LoginInput, RegisterInput } from '../schemas/auth.schema';
 import { InMemoryUserStore, SimpleUser } from '../repositories/in-memory-user.repository';
 import { databaseService } from '../app';
+import appConfig from '../config/app.config';
 
 export interface AuthResponse {
   user: {

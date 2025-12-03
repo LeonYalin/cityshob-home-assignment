@@ -6,7 +6,7 @@ import { socketEvents } from '@real-time-todo/common';
 
 // Mock dependencies
 jest.mock('jsonwebtoken');
-jest.mock('../services/logger.service', () => ({
+jest.mock('./logger.service', () => ({
   Logger: jest.fn().mockImplementation(() => ({
     info: jest.fn(),
     error: jest.fn(),

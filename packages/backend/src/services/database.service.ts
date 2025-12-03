@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { Logger } from './logger.service';
+import appConfig from '../config/app.config';
 import { DatabaseConnectionError } from '../errors';
 
 export class DatabaseService {

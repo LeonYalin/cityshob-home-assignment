@@ -1,14 +1,13 @@
 import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { app, databaseService } from './app';
-import { SocketService } from './socket/socket.service';
+import { SocketService } from './services/socket.service';
 import { Logger } from './services/logger.service';
+import appConfig from './config/app.config';
 
 // Load environment variables
 dotenv.config();
 
-const PORT = process.env.PORT || 4000;
-const NODE_ENV = process.env.NODE_ENV || 'development';
 const logger = new Logger('Server');
 
 // Initialize database connection
@@ -37,12 +36,12 @@ const startServer = async () => {
     logger.info('✓ Socket.IO service initialized');
     
     // Start server
-    httpServer.listen(PORT, () => {
-      logger.info(`🚀 Server running on http://localhost:${PORT}`);
-      logger.info(`📋 Environment: ${NODE_ENV}`);
-      logger.info(`🔍 Health check: http://localhost:${PORT}/api/health`);
-      logger.info(`📋 Todos API: http://localhost:${PORT}/api/todos`);
-      logger.info(`🔌 WebSocket: Available on port ${PORT}`);
+    httpServer.listen(appConfig.port, () => {
+      logger.info(`🚀 Server running on http://localhost:${appConfig.port}`);
+      logger.info(`📋 Environment: ${appConfig.nodeEnv}`);
+      logger.info(`🔍 Health check: http://localhost:${appConfig.port}/api/health`);
+      logger.info(`📋 Todos API: http://localhost:${appConfig.port}/api/todos`);
+      logger.info(`🔌 WebSocket: Available on port ${appConfig.port}`);
       
       if (databaseService.getConnectionStatus()) {
         logger.info(`🗄️ Database: Connected to MongoDB`);
@@ -51,7 +50,7 @@ const startServer = async () => {
         logger.info(`💡 To use MongoDB: Set MONGODB_URI environment variable and restart`);
       }
       
-      if (NODE_ENV === 'production') {
+      if (appConfig.nodeEnv === 'production') {
         logger.info(`🌐 Serving Angular frontend from /dist`);
       } else {
         logger.info(`🔧 Frontend dev server: http://localhost:4200`);

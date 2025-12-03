@@ -1,11 +1,11 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import jwt from 'jsonwebtoken';
-import { Logger } from '../services/logger.service';
+import { Logger } from './logger.service';
 import { type ConnectedUser, socketEvents } from '@real-time-todo/common';
 import { TodoDoc } from '../models/todo.model';
 import { todoService } from '../app';
-import { config } from '../config/env.config';
+import appConfig from '../config/app.config';
 
 const logger = new Logger('SocketService');
 
@@ -45,7 +45,7 @@ export class SocketService {
         }
 
         // Verify JWT token
-        const decoded = jwt.verify(token, config.jwtSecret) as ConnectedUser;
+        const decoded = jwt.verify(token, appConfig.jwtSecret) as ConnectedUser;
         
         // Attach user info to socket
         (socket as any).user = {

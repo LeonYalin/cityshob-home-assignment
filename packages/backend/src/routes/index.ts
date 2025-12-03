@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { todoRoutes } from './todo.routes';
 import authRoutes from './auth.routes';
+import appConfig from '../config/app.config';
 
 const router = Router();
 
@@ -13,7 +14,7 @@ router.get('/health', (req, res) => {
   res.json({ 
     status: 'OK',
     service: 'Real-Time Todo API',
-    environment: process.env.NODE_ENV || 'development',
+    environment: appConfig.nodeEnv,
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });

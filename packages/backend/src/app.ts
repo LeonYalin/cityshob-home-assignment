@@ -11,8 +11,8 @@ import { TodoService } from './services/todo.service';
 import { AuthService } from './services/auth.service';
 import { DatabaseService } from './services/database.service';
 import { MongoTodoRepository } from './repositories/mongo-todo.repository';
+import appConfig from './config/app.config';
 
-const NODE_ENV = process.env.NODE_ENV || 'development';
 const logger = new Logger('App');
 
 // Initialize services - these will be cached by Node.js module system
@@ -41,7 +41,7 @@ app.use(helmet({
 app.use(morganMiddleware);
 
 app.use(cors({
-  origin: process.env.SOCKET_ORIGIN_WHITELIST?.split(',') || ['http://localhost:4200'],
+  origin: appConfig.socketOriginWhitelist,
   credentials: true,
 }));
 app.use(cookieParser());
@@ -52,7 +52,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api', apiRoutes);
 
 // Serve Angular frontend in production
-if (NODE_ENV === 'production') {
+if (appConfig.nodeEnv === 'production') {
   const frontendPath = path.join(__dirname, 'frontend');
   
   // Serve static files

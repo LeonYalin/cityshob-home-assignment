@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { authService } from '../app';
 import { LoginInput, RegisterInput } from '../schemas/auth.schema';
 import { ValidationError } from '../errors';
+import appConfig from '../config/app.config';
 import type { 
   RegisterResponse, 
   LoginResponse, 
@@ -30,9 +31,9 @@ export const authController = {
       // Set HTTP-only cookie with the JWT token
       res.cookie('auth_token', result.token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        secure: appConfig.cookieSecure,
+        sameSite: appConfig.cookieSameSite,
+        maxAge: appConfig.cookieMaxAge,
         path: '/'
       });
       
@@ -75,9 +76,9 @@ export const authController = {
       // Set HTTP-only cookie with the JWT token
       res.cookie('auth_token', result.token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        secure: appConfig.cookieSecure,
+        sameSite: appConfig.cookieSameSite,
+        maxAge: appConfig.cookieMaxAge,
         path: '/'
       });
       
