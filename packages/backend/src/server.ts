@@ -9,7 +9,7 @@ import { apiRoutes } from './routes';
 import { errorHandler } from './middleware/error-handler.middleware';
 import { morganMiddleware } from './middleware/morgan.middleware';
 import { Logger } from './services/logger.service';
-import { ServiceFactory } from './services/service.factory';
+import { databaseService } from './services/instances';
 import { SocketService } from './socket/socket.service';
 
 // Load environment variables
@@ -23,7 +23,6 @@ const logger = new Logger('Server');
 // Initialize database connection
 const initializeDatabase = async () => {
   try {
-    const databaseService = ServiceFactory.getDatabaseService();
     await databaseService.connect();
   } catch (error) {
     // Don't exit on database connection failure - continue with in-memory fallback
@@ -107,7 +106,7 @@ const startServer = async () => {
     
     // Start server
     httpServer.listen(PORT, () => {
-      const databaseService = ServiceFactory.getDatabaseService();
+      // Database service is already imported as singleton
       
       logger.info(`🚀 Server running on http://localhost:${PORT}`);
       logger.info(`📋 Environment: ${NODE_ENV}`);
@@ -140,14 +139,14 @@ export const getSocketService = () => socketService;
 // Handle graceful shutdown
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM received, shutting down gracefully...');
-  const databaseService = ServiceFactory.getDatabaseService();
+  // Database service is already imported as singleton
   await databaseService.disconnect();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   logger.info('SIGINT received, shutting down gracefully...');
-  const databaseService = ServiceFactory.getDatabaseService();
+  // Database service is already imported as singleton
   await databaseService.disconnect();
   process.exit(0);
 });

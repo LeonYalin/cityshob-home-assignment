@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { ServiceFactory } from '../services/service.factory';
+import { todoService } from '../services/instances';
 import { NotFoundError } from '../errors';
 import { Logger } from '../services/logger.service';
 import { CreateTodoInput, UpdateTodoInput, TodoIdParams, TodoQueryParams } from '../schemas/todo.schema';
@@ -46,7 +46,6 @@ export const todoController = {
       logger.info('Getting all todos');
       const queryParams = req.query as unknown as TodoQueryParams;
       const userId = req.user?.userId; // From JWT middleware
-      const todoService = await ServiceFactory.getTodoService();
       const todos = await todoService.getAllTodos(queryParams, userId);
       
       res.json({
@@ -79,7 +78,6 @@ export const todoController = {
       
       logger.info(`Creating todo with title: ${todoData.title} for user: ${userId}`);
       
-      const todoService = await ServiceFactory.getTodoService();
       const todo = await todoService.createTodo(todoData, userId);
       
       // Broadcast socket event
@@ -105,7 +103,6 @@ export const todoController = {
       const { id } = req.params as TodoIdParams;
       logger.info(`Getting todo with id: ${id}`);
       
-      const todoService = await ServiceFactory.getTodoService();
       const todo = await todoService.getTodoById(id);
       if (!todo) {
         throw new NotFoundError(`Todo with id ${id} not found`);
@@ -132,7 +129,6 @@ export const todoController = {
       
       logger.info(`Updating todo with id: ${id}`);
       
-      const todoService = await ServiceFactory.getTodoService();
       const todo = await todoService.updateTodo(id, updateData, userId);
       if (!todo) {
         throw new NotFoundError(`Todo with id ${id} not found`);
@@ -164,7 +160,6 @@ export const todoController = {
       
       logger.info(`Deleting todo with id: ${id}`);
       
-      const todoService = await ServiceFactory.getTodoService();
       const deleted = await todoService.deleteTodo(id, userId);
       if (!deleted) {
         throw new NotFoundError(`Todo with id ${id} not found`);
@@ -192,7 +187,6 @@ export const todoController = {
       
       logger.info(`Toggling todo with id: ${id}`);
       
-      const todoService = await ServiceFactory.getTodoService();
       const todo = await todoService.toggleTodo(id);
       if (!todo) {
         throw new NotFoundError(`Todo with id ${id} not found`);
@@ -228,7 +222,6 @@ export const todoController = {
       
       logger.info(`Locking todo with id: ${id} for user: ${userId}`);
       
-      const todoService = await ServiceFactory.getTodoService();
       const lockedTodo = await todoService.lockTodo(id, userId);
       
       if (!lockedTodo) {
@@ -267,7 +260,6 @@ export const todoController = {
       
       logger.info(`Unlocking todo with id: ${id} for user: ${userId}`);
       
-      const todoService = await ServiceFactory.getTodoService();
       await todoService.unlockTodo(id, userId);
       
       // Broadcast socket event

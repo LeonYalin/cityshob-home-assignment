@@ -1,7 +1,6 @@
 import request from 'supertest';
 import express from 'express';
 import { todoController, todoDocToTodo } from './todo.controller';
-import { ServiceFactory } from '../services/service.factory';
 import { NotFoundError } from '../errors';
 import { CreateTodoInput, UpdateTodoInput } from '../schemas/todo.schema';
 
@@ -10,9 +9,19 @@ jest.mock('../server', () => ({
   getSocketService: jest.fn().mockReturnValue(null),
 }));
 
-// Mock the ServiceFactory
-jest.mock('../services/service.factory');
-const mockServiceFactory = ServiceFactory as jest.Mocked<typeof ServiceFactory>;
+// Mock the todoService from instances
+jest.mock('../services/instances', () => ({
+  todoService: {
+    getAllTodos: jest.fn(),
+    getTodoById: jest.fn(),
+    createTodo: jest.fn(),
+    updateTodo: jest.fn(),
+    deleteTodo: jest.fn(),
+    lockTodo: jest.fn(),
+    unlockTodo: jest.fn(),
+    toggleTodo: jest.fn(),
+  }
+}));
 
 // Mock Logger
 jest.mock('../services/logger.service', () => ({
@@ -51,6 +60,13 @@ describe('TodoController', () => {
   let mockTodoService: any;
 
   beforeEach(() => {
+    // Get the mocked todoService
+    const { todoService } = require('../services/instances');
+    mockTodoService = todoService;
+
+    // Reset all mocks
+    jest.clearAllMocks();
+
     // Create Express app for testing
     app = express();
     app.use(express.json());
@@ -60,19 +76,6 @@ describe('TodoController', () => {
       req.user = { userId: 'test-user-123', username: 'testuser', email: 'test@example.com' };
       next();
     });
-
-    // Create mock service
-    mockTodoService = {
-      getAllTodos: jest.fn(),
-      getTodoById: jest.fn(),
-      createTodo: jest.fn(),
-      updateTodo: jest.fn(),
-      deleteTodo: jest.fn(),
-      toggleTodo: jest.fn(),
-    };
-
-    // Mock ServiceFactory to return our mock service
-    mockServiceFactory.getTodoService.mockResolvedValue(mockTodoService);
 
     // Set up routes
     app.get('/todos', todoController.getAllTodos);

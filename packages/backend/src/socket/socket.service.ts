@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { Logger } from '../services/logger.service';
 import { type ConnectedUser, socketEvents } from '@real-time-todo/common';
 import { TodoDoc } from '../models/todo.model';
-import { RepositoryFactory } from '../repositories/repository.factory';
+import { todoService } from '../services/instances';
 import { config } from '../config/env.config';
 
 const logger = new Logger('SocketService');
@@ -153,16 +153,15 @@ export class SocketService {
       // Unlock all todos locked by this user
       try {
         logger.info(`Cleaning up locks for user: ${user.username}`);
-        const todoRepository = await RepositoryFactory.getTodoRepository();
         
-        // Find all todos locked by this user
-        const allTodos = await todoRepository.findAll({ limit: 1000, page: 1 }, user.userId);
+        // Find all todos locked by this user and unlock them
+        const allTodos = await todoService.getAllTodos({ limit: 1000, page: 1 }, user.userId);
         const lockedByUser = allTodos.filter(todo => todo.lockedBy === user.userId);
         
         // Unlock each todo
         for (const todo of lockedByUser) {
           try {
-            await todoRepository.unlock(todo.id);
+            await todoService.unlockTodo(todo.id, user.userId);
             logger.info(`Unlocked todo ${todo.id} for disconnected user ${user.username}`);
           } catch (unlockError) {
             logger.error(`Failed to unlock todo ${todo.id}:`, unlockError);

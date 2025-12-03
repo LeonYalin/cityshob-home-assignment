@@ -4,7 +4,7 @@ import { Logger } from './logger.service';
 import { ValidationError } from '../errors';
 import { LoginInput, RegisterInput } from '../schemas/auth.schema';
 import { InMemoryUserStore, SimpleUser } from '../repositories/in-memory-user.repository';
-import { ServiceFactory } from './service.factory';
+import { databaseService } from './instances';
 
 export interface AuthResponse {
   user: {
@@ -44,7 +44,7 @@ export class AuthService {
     this.logger.info('Attempting user registration', { username: registerData.username, email: registerData.email });
 
     try {
-      const databaseService = ServiceFactory.getDatabaseService();
+      
       const isMongoConnected = databaseService.getConnectionStatus();
 
       if (isMongoConnected) {
@@ -140,7 +140,7 @@ export class AuthService {
     this.logger.info('Attempting user login', { email: loginData.email });
 
     try {
-      const databaseService = ServiceFactory.getDatabaseService();
+      
       const isMongoConnected = databaseService.getConnectionStatus();
 
       if (isMongoConnected) {
@@ -230,7 +230,7 @@ export class AuthService {
     this.logger.debug('Fetching user by ID', { userId });
     
     try {
-      const databaseService = ServiceFactory.getDatabaseService();
+      
       const isMongoConnected = databaseService.getConnectionStatus();
 
       if (isMongoConnected) {

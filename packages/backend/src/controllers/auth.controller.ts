@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { AuthService } from '../services/auth.service';
+import { authService } from '../services/instances';
 import { LoginInput, RegisterInput } from '../schemas/auth.schema';
 import { ValidationError } from '../errors';
 import type { 
@@ -8,8 +8,6 @@ import type {
   GetCurrentUserResponse, 
   LogoutResponse 
 } from '@real-time-todo/common';
-
-const authService = new AuthService();
 
 export const authController = {
   /**

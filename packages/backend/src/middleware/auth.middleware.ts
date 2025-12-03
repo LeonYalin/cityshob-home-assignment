@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { AuthService, JwtPayload } from '../services/auth.service';
+import { JwtPayload } from '../services/auth.service';
 import { ValidationError } from '../errors';
+import { authService } from '../services/instances';
 
 // Extend Request interface to include user
 declare global {
@@ -12,8 +13,6 @@ declare global {
 }
 
 export class AuthMiddleware {
-  private static authService = new AuthService();
-
   /**
    * Middleware to verify JWT token and add user to request
    * Reads JWT token from HTTP-only cookie for security
@@ -28,7 +27,7 @@ export class AuthMiddleware {
       }
 
       // Verify token and get user payload
-      const userPayload = AuthMiddleware.authService.verifyToken(token);
+      const userPayload = authService.verifyToken(token);
       
       // Add user to request object
       req.user = userPayload;
@@ -49,7 +48,7 @@ export class AuthMiddleware {
       
       if (token) {
         try {
-          const userPayload = AuthMiddleware.authService.verifyToken(token);
+          const userPayload = authService.verifyToken(token);
           req.user = userPayload;
         } catch (error) {
           // Ignore token verification errors in optional auth

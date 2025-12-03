@@ -1,19 +1,27 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthMiddleware } from '../middleware/auth.middleware';
-import { AuthService } from '../services/auth.service';
 import { ValidationError } from '../errors';
 
-// Mock AuthService
-jest.mock('../services/auth.service');
-const MockedAuthService = AuthService as jest.MockedClass<typeof AuthService>;
+// Mock the auth service instance
+jest.mock('../services/instances', () => ({
+  authService: {
+    verifyToken: jest.fn(),
+  }
+}));
 
 describe('Auth Middleware', () => {
   let req: Partial<Request>;
   let res: Partial<Response>;
   let next: NextFunction;
-  let mockAuthService: jest.Mocked<AuthService>;
+  let mockAuthService: any;
 
   beforeEach(() => {
+    // Get the mocked authService
+    const { authService } = require('../services/instances');
+    mockAuthService = authService;
+    
+    jest.clearAllMocks();
+
     req = {
       headers: {},
       cookies: {},
@@ -24,12 +32,6 @@ describe('Auth Middleware', () => {
       json: jest.fn()
     };
     next = jest.fn();
-
-    // Create a mock instance
-    mockAuthService = new MockedAuthService() as jest.Mocked<AuthService>;
-    
-    // Replace the static authService with our mock
-    (AuthMiddleware as any).authService = mockAuthService;
   });
 
   afterEach(() => {
